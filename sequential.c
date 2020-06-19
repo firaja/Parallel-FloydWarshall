@@ -3,33 +3,18 @@
 #include <cstdlib>
 #include <time.h>
 #define DEFAULT 1000 //number of nodes
+#define PRINTABLE 0
+#define INFINITY 1000000
 
-void showDistances(int** dist, int n) 
-{
+void showDistances(int** dist, uint n);
+void populateMatrix(int** dist, uint n);
 
-	int i, j;
-	printf("     ");
-	for(i = 0; i < n; i++)
-	{
-		printf("N%d   ", i);
-	}
-	printf("\n");
-	for(i = 0; i < n; i++) {
-		printf("N%d", i);
-		for(j = 0; j < n; j++)
-		{
-			printf("%5d", dist[i][j]);
-		}
-		printf("\n");
-	}
-	printf("\n");
-}
 
 
 int main(int argc, char** argv) 
 {
-	int n;
-	if(argc == 0)
+	uint n;
+	if(argc <= 1)
 	{
 		n = DEFAULT;
 	}
@@ -37,42 +22,26 @@ int main(int argc, char** argv)
 	{
 		n = atoi(argv[1]);
 	}
-	int i, j, k;
-	int** dist; //array with the distances between nodes
-
-	//Initiate the necessary memory with malloc()
-	dist = (int**) malloc(n * sizeof(int*));
-	for(i = 0; i < n; i++)
-		dist[i] = (int*) malloc(n * sizeof(int));
 	
-	time_t start, end;
-	//use current time
-	//time(&start);
-	//to generate random numbers with rand()
-	srand(time(NULL));
+	uint i, j, k;
+	int** dist;
 
-	//Initiate the dist with random values from 0-99
-	for(i = 0; i < n; i++)
+	dist = (int**) malloc(n * sizeof(uint*));
+	for(int i = 0; i < n; i++)
 	{
-		for(j = 0; j < n; j++)
-		{
-			if(i == j)
-			{
-				dist[i][j] = 0;
-			}
-			else
-			{
-				dist[i][j] = (rand() % 10);
-			}
-		}
+		dist[i] = (int*) malloc(n * sizeof(uint));
 	}
+
+	populateMatrix(dist, n);
 				
-	//Print initial distances
+	printf("*** Adjacency matrix:\n");
 	showDistances(dist, n);	
 
-	time(&start);
-	//Calculate minimum distance paths
-	//Using the Floyd Warshall algorithm
+	struct timespec start, end;
+    long long accum;
+
+	clock_gettime(CLOCK_MONOTONIC_RAW, &start);
+	
 	for(k = 0; k < n; k++)
 	{
 		for(i = 0; i < n; i++)
@@ -90,11 +59,57 @@ int main(int argc, char** argv)
 		}
 	}
 				
-	time(&end);
-	//print the final distances
+	clock_gettime(CLOCK_MONOTONIC_RAW, &end);
+	accum = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec) / 1000;
+
+	printf("*** The solution is:\n");
 	showDistances(dist, n);
 
-	printf("Total Elapsed Time %f sec\n", difftime(end, start));	
+	printf("[SEQUENTIAL] Total elapsed time %lld ns\n", accum);	
 	free(dist);
 	return 0;
+}
+
+void showDistances(int** dist, uint n) 
+{
+	if(PRINTABLE)
+	{
+		uint i, j;
+		printf("     ");
+		for(i = 0; i < n; i++)
+		{
+			printf("[%d]  ", i);
+		}
+		printf("\n");
+		for(i = 0; i < n; i++) {
+			printf("[%d]", i);
+			for(j = 0; j < n; j++)
+			{
+				printf("%5d", dist[i][j]);
+			}
+			printf("\n");
+		}
+		printf("\n");
+	}
+}
+
+void populateMatrix(int** dist, uint n)
+{
+	uint i, j;
+	srand(42);
+
+	for(i = 0; i < n; i++)
+	{
+		for(j = 0; j < n; j++)
+		{
+			if(i == j)
+			{
+				dist[i][j] = 0;
+			}
+			else
+			{
+				dist[i][j] = 1 + rand() % 100;
+			}
+		}
+	}
 }
