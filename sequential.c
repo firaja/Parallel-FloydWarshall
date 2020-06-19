@@ -3,12 +3,12 @@
 #include <cstdlib>
 #include <time.h>
 #define DEFAULT 1000 //number of nodes
-#define PRINTABLE 0
+#define PRINTABLE 1
 #define INFINITY 1000000
 
 void showDistances(int** dist, uint n);
 void populateMatrix(int** dist, uint n);
-
+void floydWarshall(int** dist, uint n);
 
 
 int main(int argc, char** argv) 
@@ -23,7 +23,6 @@ int main(int argc, char** argv)
 		n = atoi(argv[1]);
 	}
 	
-	uint i, j, k;
 	int** dist;
 
 	dist = (int**) malloc(n * sizeof(uint*));
@@ -42,6 +41,22 @@ int main(int argc, char** argv)
 
 	clock_gettime(CLOCK_MONOTONIC_RAW, &start);
 	
+	floydWarshall(dist, n);
+				
+	clock_gettime(CLOCK_MONOTONIC_RAW, &end);
+	accum = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec) / 1000;
+
+	printf("*** The solution is:\n");
+	showDistances(dist, n);
+
+	printf("[SEQUENTIAL] Total elapsed time %lld ns\n", accum);	
+	free(dist);
+	return 0;
+}
+
+void floydWarshall(int** dist, uint n)
+{
+	uint i, j, k;
 	for(k = 0; k < n; k++)
 	{
 		for(i = 0; i < n; i++)
@@ -58,16 +73,6 @@ int main(int argc, char** argv)
 			}
 		}
 	}
-				
-	clock_gettime(CLOCK_MONOTONIC_RAW, &end);
-	accum = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec) / 1000;
-
-	printf("*** The solution is:\n");
-	showDistances(dist, n);
-
-	printf("[SEQUENTIAL] Total elapsed time %lld ns\n", accum);	
-	free(dist);
-	return 0;
 }
 
 void showDistances(int** dist, uint n) 
