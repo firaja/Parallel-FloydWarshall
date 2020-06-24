@@ -1,15 +1,17 @@
-// mpicc -g -Wall mpi.c -o mpi.out && mpirun -np 5 mpi.out 20
+// mpicc -g -Wall mpi.c -o mpi.out && mpirun -np 5 mpi.out 20 100
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <mpi.h>
+#define DEFAULT 10
+#define DENSITY 50
 #define PRINTABLE 1
-#define DEFAULT 1000
-#define INFINITY 1000000
+#define MAX 100
+#define INF MAX + 1
 #define ROOT 0
 
 void showDistances(int matrix[], int n);
-void populateMatrix(int matrix[], int n, int rank, int processes);
+void populateMatrix(int matrix[], int n, int density, int rank, int processes);
 void gatherResult(int matrix[], int n, int rank, int processes);
 void castKRow(int matrix[], int n, int section, int kRow[], int k, int rank);
 void floydWarshall(int matrix[], int n, int rank, int processes);
@@ -22,7 +24,7 @@ int main(int argc, char* argv[])
     long long accum;
 
 
-	int  n;
+	int  n, density;
 	int* matrix;
 	
 	int processes, rank;
@@ -34,13 +36,15 @@ int main(int argc, char* argv[])
 
 	if (rank == ROOT) 
 	{
-		if(argc <= 1)
+		if(argc <= 2)
 		{
 			n = DEFAULT;
+			density = 100;
 		}
 		else
 		{
 			n = atoi(argv[1]);
+			density = atoi(argv[2]);
 		}
 	}
 
@@ -48,7 +52,7 @@ int main(int argc, char* argv[])
 
 	matrix = malloc(n * n / processes * sizeof(int));
 
-	populateMatrix(matrix, n, rank, processes);
+	populateMatrix(matrix, n, density, rank, processes);
 
 	
 	if (rank == ROOT) 
@@ -75,8 +79,8 @@ int main(int argc, char* argv[])
 
 
 
-void populateMatrix(int matrix[], int n, int rank, int processes) { 
-	int i, j;
+void populateMatrix(int matrix[], int n, int density, int rank, int processes) { 
+	int i, j, value;
 	int* temp_mat = NULL;
 
 	if (rank == ROOT) {
@@ -92,10 +96,18 @@ void populateMatrix(int matrix[], int n, int rank, int processes) {
 				}
 				else
 				{
-					temp_mat[i*n+j] = 1+ rand() % 100;
+					value = 1 + rand() % MAX;
+					if(value > density)
+					{
+						temp_mat[i*n+j] = INF;
+					}
+					else
+					{
+						temp_mat[i*n+j] = value;
+					}
 				}
 
-			}
+				}
 		}
 
 		int split = n * n/processes;
@@ -128,7 +140,15 @@ void showDistances(int matrix[], int n)
 			printf("[%d]", i);
 			for(j = 0; j < n; j++)
 			{
-				printf("%5d", matrix[i*n+j]);
+				if(matrix[i * n + j] == INF)
+				{
+					printf("  inf");
+				}
+				else
+				{
+					printf("%5d", matrix[i * n + j]);
+				}
+				
 			}
 			printf("\n");
 		}

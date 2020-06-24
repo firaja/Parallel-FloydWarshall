@@ -12,7 +12,8 @@
 #define DEFAULT 10
 #define DENSITY 50
 #define PRINTABLE 1
-#define INF 10000
+#define MAX 100
+#define INF MAX + 1
 
 
 __global__ void wakeGPU(int reps);
@@ -197,8 +198,7 @@ void populateMatrix(int *matrix, int n, int density)
 			}
 			else
 			{
-				value = 1 + rand() % 100;
-				printf("v=%d, d=%d", value, density);
+				value = 1 + rand() % MAX;
 				if(value > density)
 				{
 					matrix[i*n+j] = INF;
