@@ -3,11 +3,8 @@
 #include <stdlib.h>
 #include <time.h>
 #include <mpi.h>
-#define DEFAULT 10
-#define DENSITY 50
-#define PRINTABLE 1
-#define MAX 100
-#define INF MAX + 1
+#include "config.h"
+
 #define ROOT 0
 
 void showDistances(int matrix[], int n);
@@ -66,14 +63,16 @@ int main(int argc, char* argv[])
 
 	free(matrix);
 	
-	MPI_Finalize();
-
+	
 	if (rank == ROOT) 
 	{
 		clock_gettime(CLOCK_MONOTONIC_RAW, &end);
 		accum = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec) / 1000;
 		printf("[DISTRIBUTED] Total elapsed time %lld ns\n", accum);
 	}
+	
+	MPI_Finalize();
+
 	return 0;
 }  
 

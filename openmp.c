@@ -1,14 +1,10 @@
-// g++ -fopenmp openmp.c -o openmp.out && ./openmp.out 10
+// g++ -fopenmp openmp.c -o openmp.out && ./openmp.out 10 100
 #include <stdio.h>
 #include <stdlib.h>
 #include <cstdlib>
 #include <time.h>
 #include <omp.h>
-#define DEFAULT 10 //number of nodes
-#define PRINTABLE 1
-#define MAX 100
-#define INF MAX + 1
-#define DENSITY 50
+#include "config.h"
 
 void showDistances(int** matrix, uint n);
 void populateMatrix(int** matrix, uint n, uint density);
@@ -74,12 +70,9 @@ void floydWarshall(int** matrix, uint n)
 			{
 				for(j = 0; j < n; j++)
 				{
-					if ((matrix[i][k] * matrix[k][j] != 0) && (i != j))
+					if(matrix[i][j] > matrix[i][k] + matrix[k][j] || matrix[i][j] == 0)
 					{
-						if(matrix[i][j] > matrix[i][k] + matrix[k][j] || matrix[i][j] == 0)
-						{
-							matrix[i][j] = matrix[i][k] + matrix[k][j];
-						}
+						matrix[i][j] = matrix[i][k] + matrix[k][j];
 					}
 				}
 			}

@@ -5,15 +5,10 @@
 #include <string>
 #include <cuda.h>
 #include <ctime>
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
+#include "config.h"
 
-#define BLOCK_SIZE 256
-#define DEFAULT 10
-#define DENSITY 50
-#define PRINTABLE 1
-#define MAX 100
-#define INF MAX + 1
+#define BLOCK_SIZE 128
+
 
 
 __global__ void wakeGPU(int reps);
@@ -50,13 +45,27 @@ int main(int argc, char* argv[])
 	printf("*** Adjacency matrix:\n");
 	showDistances(matrix, n);
 
+	cudaEvent_t start, stop;
+	cudaEventCreate(&start);
+	cudaEventCreate(&stop);
+
 	wakeGPU<<<1, BLOCK_SIZE>>>(32);
 
+	cudaEventRecord(start);
+
 	floydWarshall(matrix, n);
+
+	cudaEventRecord(stop);
+
+
+	cudaEventSynchronize(stop);
+	float accum = 0;
+	cudaEventElapsedTime(&accum, start, stop);
 
 	printf("*** The solution is:\n");
 	showDistances(matrix, n);
 
+	printf("[GPGPU] Total elapsed time %f ms\n", accum);	
 	
 	free(matrix);
 	
