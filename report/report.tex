@@ -1,0 +1,68 @@
+\documentclass[twocolumns]{IEEEtran}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{authblk}
+\usepackage[english]{babel}
+\usepackage{blindtext}
+\usepackage[ruled,vlined,linesnumbered]{algorithm2e}
+\usepackage{algorithmic,float}
+\usepackage{setspace}
+\usepackage{amsfonts}
+
+\usepackage[utf8]{inputenc}
+\title{Parallelization of the Floyd-Warshall algorithm}
+\author{David Bertoldi -- 735213 \\ email: d.bertoldi@campus.unimib.it}
+\affil{Department of Informatics, Systems and Communication}
+\affil{University of Milano-Bicocca}
+\date{June 2020}
+\begin{document}
+\maketitle 
+\begin{abstract}
+The well known Floyd-Warshall (FW) algorithm solves the all-pairs shortest path problem on directed graphs. In this work we parallelize the FW using three different
+programming environments, namely MPI, OpenMP and CUDA. We experimented with multiple data sizes, in order to gain insight on the execution behavior
+of the parallelized algorithms on modern multicore and distributed platforms, and on the programmability of the aforementioned environments. We were able
+to significantly accelerate FW performance utilizing the full capacity provided by the architectures used.
+\end{abstract}
+\section{Introduction and Background}
+The FW is a classic dynamic programming algorithm that solves the \emph{all-pairs shortest path (APSP)} problem on directed weighted
+graphs $G(V, E, w)$, where $V = \{1, \dots, n\}$ is a set of nodes, $E \subseteq V \times V$ are the edges and $w$ is a weight function $E \rightarrow  \mathbb{R}$
+that expresses the cost of traversing two nodes. The number of nodes is denoted by $n$ and the number of edges by $m$ . \par
+The output of the algorithm is typically in matrix form: the entry in the $i$th row and $j$th column is the weight of the shortest path between
+nodes $i$ and $j$. FW runs in $\Theta(|V|^3)$ time and for this reason is a good choiche when working with dense graph: even though there
+may be up to $\Omega(|E|^2)$ edges, the computational time is independent from the number of edges. \par
+The FW algorithm is shown in Alg. \ref{alg:fw1}
+
+\begin{algorithm}[h!]
+\label{alg:fw1}
+\SetAlgoLined
+
+\For{$(u, v) \in E$}{
+    $M_{u, v} \leftarrow w(u, v)$
+}
+\For{$v = 1 \rightarrow n$}{
+    $M_{v, v} \leftarrow 0$
+}
+ \For{$k = 1 \rightarrow n$}{
+  \For{$i = 1 \rightarrow n$}{
+  \For{$j = 1 \rightarrow n$}{
+  \If{$M_{i, j} > M_{i, k} + M_{k, j}$}{
+ 
+    $M_{i, j} \leftarrow M_{i, k} + M_{k, j}$ 
+ }
+ }
+ }
+ }
+ 
+ \caption[alg:fw1]{The Floyd-Warshall (FW) algorithm}
+\end{algorithm}
+
+It is easy to notice that that the nested $i$ and $j$ for-loops are totally independent and therefore parallelizable.
+
+
+\section{Methodology}
+
+
+
+\bibliographystyle{ieeetr}
+\bibliography{Bibliography}
+\end{document}
