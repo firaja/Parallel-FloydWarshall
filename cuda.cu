@@ -14,7 +14,7 @@
 __global__ void wakeGPU(int reps);
 __global__ void floydWarshallKernel(int k, int *G, int N);
 
-void floydWarshall(int *matrix, const int N);
+void floydWarshall(int *matrix, const int N, int bsize);
 void populateMatrix(int *matrix, int n, int density);
 void showDistances(int matrix[], int n);
 
@@ -22,21 +22,25 @@ void showDistances(int matrix[], int n);
 
 int main(int argc, char* argv[])
 {
-	int n, density;
+	int n, density, bsize;
 
-	if(argc <= 2)
+	if(argc <= 3)
 	{
 		n = DEFAULT;
 		density = 100;
+		bsize = BLOCK_SIZE;
 	}
 	else
 	{
 		n = atoi(argv[1]);
 		density = atoi(argv[2]);
+		bsize = atoi(argv[3]);
 	}
 
 	
 	const int size = n * n * sizeof(int);
+
+	printf("%d %d %d", n, density, bsize);
 		
 	int* matrix = (int *) malloc(size);
 
@@ -49,11 +53,11 @@ int main(int argc, char* argv[])
 	cudaEventCreate(&start);
 	cudaEventCreate(&stop);
 
-	wakeGPU<<<1, BLOCK_SIZE>>>(32);
+	wakeGPU<<<1, bsize>>>(32);
 
 	cudaEventRecord(start);
 
-	floydWarshall(matrix, n);
+	floydWarshall(matrix, n, bsize);
 
 	cudaEventRecord(stop);
 
@@ -118,7 +122,7 @@ __global__ void floydWarshallKernel(int k, int *G, int N)
 }
 
 
-void floydWarshall(int *matrix, const int n)
+void floydWarshall(int *matrix, const int n, int bsize)
 {
 	int *deviceMatrix;
 	int size = n * n * sizeof(int);
@@ -137,11 +141,11 @@ void floydWarshall(int *matrix, const int n)
 	}
 	
 
-	dim3 dimGrid((n + BLOCK_SIZE - 1) / BLOCK_SIZE, n);
+	dim3 dimGrid((n + bsize - 1) / bsize, n);
 
 	for(int k = 0; k < n; k++)
 	{
-		floydWarshallKernel<<<dimGrid, BLOCK_SIZE>>>(k, deviceMatrix, n);
+		floydWarshallKernel<<<dimGrid, bsize>>>(k, deviceMatrix, n);
 		err = cudaDeviceSynchronize();
 		if(err != cudaSuccess)
 		{

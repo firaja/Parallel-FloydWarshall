@@ -1,4 +1,4 @@
-// g++ -fopenmp openmp.c -o openmp.out && ./openmp.out 10 100
+// g++ -fopenmp openmp.c -o openmp.out -O3 && ./openmp.out 10 100
 #include <stdio.h>
 #include <stdlib.h>
 #include <cstdlib>
@@ -8,21 +8,25 @@
 
 void showDistances(int** matrix, uint n);
 void populateMatrix(int** matrix, uint n, uint density);
-void floydWarshall(int** matrix, uint n);
+void floydWarshall(int** matrix, uint n, int threads);
 
 
 int main(int argc, char** argv) 
 {
-	uint n, density;
-	if(argc <= 2)
+
+  
+	uint n, density, threads;
+	if(argc <= 3)
 	{
 		n = DEFAULT;
 		density = 100;
+		threads = omp_get_max_threads();
 	}
 	else
 	{
 		n = atoi(argv[1]);
 		density = atoi(argv[2]);
+		threads = atoi(argv[3]);
 	}
 	
 	int** matrix;
@@ -34,7 +38,7 @@ int main(int argc, char** argv)
 	}
 
 	populateMatrix(matrix, n, density);
-				
+			
 	printf("*** Adjacency matrix:\n");
 	showDistances(matrix, n);	
 
@@ -43,7 +47,7 @@ int main(int argc, char** argv)
 
 	clock_gettime(CLOCK_MONOTONIC_RAW, &start);
 	
-	floydWarshall(matrix, n);
+	floydWarshall(matrix, n, threads);
 				
 	clock_gettime(CLOCK_MONOTONIC_RAW, &end);
 	accum = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec) / 1000;
@@ -56,9 +60,8 @@ int main(int argc, char** argv)
 	return 0;
 }
 
-void floydWarshall(int** matrix, uint n)
+void floydWarshall(int** matrix, uint n, int threads)
 {
-	int threads = omp_get_max_threads();
 	uint i, j, k;
 	#pragma omp parallel num_threads(threads) private(k) shared(matrix)
 	{
