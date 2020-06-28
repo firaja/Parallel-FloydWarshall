@@ -8,7 +8,11 @@
 \usepackage{algorithmic,float}
 \usepackage{setspace}
 \usepackage{amsfonts}
-
+\usepackage{hyperref}
+\graphicspath{ {./images/} }
+\usepackage{listings}
+\usepackage[font=small,labelfont=bf]{caption}
+\usepackage[table,xcdraw]{xcolor}
 \usepackage[utf8]{inputenc}
 \title{Parallelization of the Floyd-Warshall algorithm}
 \author{David Bertoldi -- 735213 \\ email: d.bertoldi@campus.unimib.it}
@@ -56,10 +60,78 @@ The FW algorithm is shown in Alg. \ref{alg:fw1}
  \caption[alg:fw1]{The Floyd-Warshall (FW) algorithm}
 \end{algorithm}
 
+A C implementation of this algorithm can be found \href{https://github.com/firaja/Parallel-FloydWarshall/blob/master/sequential.c}{here};
+it is also referred in this document as \emph{sequential} implementation and it is used as base version when comparing to parallel implementations. \par \par
+
+
+
+In particular we define the \emph{speedup} ($S$) of a given version $v$ of the algorithm as it follows:
+
+\[S = \frac{T_{s}}{T_{v}}\]
+
+where $T_v$ is the execution time of the version $v$ of FW and $T_s$ is the execution time of the \emph{sequential} version.
+
 It is easy to notice that that the nested $i$ and $j$ for-loops are totally independent and therefore parallelizable.
 
 
-\section{Methodology}
+\section{Parallel Programming Environments}
+
+\section{Computational Platforms and Software Libraries}
+\subsection{Sequential implementation}
+The \emph{sequential} version of the FW algorithm can be found \href{https://github.com/firaja/Parallel-FloydWarshall/blob/master/sequential.c}{here}. In order to compile run
+\begin{lstlisting}
+$ gcc sequential.c -o sequential.out -O3
+\end{lstlisting}
+notice the \texttt{-O3} flag that makes the program run $3.5$ times faster.
+\par
+The \texttt{gcc} version used for this work is 7.5.0 and the program ran on a Intel Core i7-9700K. \\
+Table \ref{tab:seq-time} shows the execution time (expressed in milliseconds) depending on the number of nodes
+in the environment.
+
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|l|l|}
+\hline
+\rowcolor[HTML]{3166FF} 
+{\color[HTML]{FFFFFF} \textbf{Vertices}} & {\color[HTML]{FFFFFF} \textbf{Execution time (ms)}} \\ \hline
+1000                                     & 1095                                                \\ \hline
+2000                                     & 8860                                                \\ \hline
+5000                                     & 138643                                              \\ \hline
+7500                                     & 468750                                              \\ \hline
+10000                                    & 1112111                                             \\ \hline
+12500                                    & 2170138                                             \\ \hline
+\end{tabular}
+\caption{Execution time of the \emph{sequential} FW}                                                                                                                                            
+\label{tab:seq-time} 
+\end{table}
+
+Figure \ref{fig:seq-time} shows the trend of the execution time. 
+
+\begin{figure}[h!]
+\centering                                                                        
+\includegraphics[width=3in]{images/seq-time}
+\captionsetup{justification=centering,margin=2cm}                                                                                                                                   
+\caption{Trend of the execution time based on Table \ref{tab:seq-time}}                                                                                                                                            
+\label{fig:seq-time}                                                                                                                                                           
+\end{figure}
+
+
+It is easy to notice that the graph represent a 
+third grade curve; this is the interpolated function starting from the collected data:
+\[f(n) = 2.22n^3 - 18.83n^2 + 92.14n -94.84 \]
+
+
+
+\subsection{MPI implementation}
+
+The \emph{MPI} version of the FW algorithm can be found \href{https://github.com/firaja/Parallel-FloydWarshall/blob/master/mpi.c}{here}. In order to compile run
+\begin{lstlisting}
+$ mpicc -g -Wall mpi.c -o mpi.out -O3
+\end{lstlisting}
+
+
+
 
 
 
