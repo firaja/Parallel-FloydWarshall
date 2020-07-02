@@ -1,0 +1,47 @@
+\section{Introduction and Background}
+The FW is a classic dynamic programming algorithm that solves the \emph{all-pairs shortest path (APSP)} problem on directed weighted
+graphs $G(V, E, w)$, where $V = \{1, \dots, n\}$ is a set of nodes, $E \subseteq V \times V$ are the edges and $w$ is a weight function $E \rightarrow  \mathbb{R}$
+that expresses the cost of crossing two nodes. The number of nodes is denoted by $n$ and the number of edges by $m$ . \par
+The output of the algorithm is typically in matrix form: the entry in the $i$th row and $j$th column is the weight of the shortest path between
+nodes $i$ and $j$. FW runs in $\Theta(|V|^3)$ time and for this reason is a good choiche when working with dense graph: even though there
+may be up to $\Omega(|E|^2)$ edges, the computational time is independent from the number of edges. \par
+The FW algorithm is shown in \textbf{Algorithm \ref*{alg:fw1}}.
+
+\begin{algorithm}[h!]
+
+\SetAlgoLined
+
+\For{$(u, v) \in E$}{
+    $M_{u, v} \leftarrow w(u, v)$
+}
+\For{$v = 1 \rightarrow n$}{
+    $M_{v, v} \leftarrow 0$
+}
+ \For{$k = 1 \rightarrow n$}{
+  \For{$i = 1 \rightarrow n$}{
+  \For{$j = 1 \rightarrow n$}{
+  \If{$M_{i, j} > M_{i, k} + M_{k, j}$}{
+ 
+    $M_{i, j} \leftarrow M_{i, k} + M_{k, j}$ 
+ }
+ }
+ }
+ }
+ 
+\caption{The Floyd-Warshall (FW) algorithm}\label{alg:fw1}
+\end{algorithm}
+
+A C implementation of this algorithm can be found \href{https://github.com/firaja/Parallel-FloydWarshall/blob/master/sequential.c}{here};
+this version is referred in this document as \emph{sequential} implementation and it is used as base version when comparing to parallel implementations. \par \par
+
+
+
+In particular we define the \emph{speedup} ($S$) of a given version $v$ of the algorithm as it follows:
+
+\[S = \frac{T_{s}}{T_{v}}\]
+
+where $T_v$ is the execution time of the version $v$ of FW and $T_s$ is the execution time of the \emph{sequential} version. \par
+Another important factor is the \emph{efficiency} ($E$) which describes how the solution scales well by adding processor units
+
+\[E = \frac{S}{p}\]
+where $S$ is the speedup and $p$ the number of processor units; the closer $E$ remains to $1$ while increasing $p$, the better.

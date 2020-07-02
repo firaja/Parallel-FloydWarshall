@@ -10,8 +10,11 @@
 \usepackage{amsfonts}
 \usepackage{hyperref}
 \graphicspath{ {./images/} }
+\usepackage{fontspec}
 \usepackage{listings}
-\usepackage[font=small,labelfont=bf]{caption}
+\usepackage{amsmath}
+\usepackage{mathabx}
+\newfontfamily\listingsfont[Scale=.7]{Ubuntu}\usepackage[font=small,labelfont=bf]{caption}
 \usepackage[table,xcdraw]{xcolor}
 \usepackage[utf8]{inputenc}
 \title{Parallelization of the Floyd-Warshall algorithm}
@@ -19,189 +22,58 @@
 \affil{Department of Informatics, Systems and Communication}
 \affil{University of Milano-Bicocca}
 \date{June 2020}
+
+\definecolor{mGreen}{rgb}{0,0.6,0}
+\definecolor{mGray}{rgb}{0.5,0.5,0.5}
+\definecolor{mPurple}{rgb}{0.58,0,0.82}
+\definecolor{backgroundColour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{CStyle}{
+    backgroundcolor=\color{backgroundColour},   
+    commentstyle=\color{mGreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{mGray},
+    stringstyle=\color{mPurple},
+    basicstyle=\linespread{1}\listingsfont,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2,
+    language=C,
+}
+
 \begin{document}
+
 \maketitle 
+
+
+
 \begin{abstract}
 The well known Floyd-Warshall (FW) algorithm solves the all-pairs shortest path problem on directed graphs. In this work we parallelize the FW using three different
 programming environments, namely MPI, OpenMP and CUDA. We experimented with multiple data sizes, in order to gain insight on the execution behavior
 of the parallelized algorithms on modern multicore and distributed platforms, and on the programmability of the aforementioned environments. We were able
 to significantly accelerate FW performance utilizing the full capacity provided by the architectures used.
 \end{abstract}
-\section{Introduction and Background}
-The FW is a classic dynamic programming algorithm that solves the \emph{all-pairs shortest path (APSP)} problem on directed weighted
-graphs $G(V, E, w)$, where $V = \{1, \dots, n\}$ is a set of nodes, $E \subseteq V \times V$ are the edges and $w$ is a weight function $E \rightarrow  \mathbb{R}$
-that expresses the cost of traversing two nodes. The number of nodes is denoted by $n$ and the number of edges by $m$ . \par
-The output of the algorithm is typically in matrix form: the entry in the $i$th row and $j$th column is the weight of the shortest path between
-nodes $i$ and $j$. FW runs in $\Theta(|V|^3)$ time and for this reason is a good choiche when working with dense graph: even though there
-may be up to $\Omega(|E|^2)$ edges, the computational time is independent from the number of edges. \par
-The FW algorithm is shown in Alg. \ref{alg:fw1}
-
-\begin{algorithm}[h!]
-\label{alg:fw1}
-\SetAlgoLined
-
-\For{$(u, v) \in E$}{
-    $M_{u, v} \leftarrow w(u, v)$
-}
-\For{$v = 1 \rightarrow n$}{
-    $M_{v, v} \leftarrow 0$
-}
- \For{$k = 1 \rightarrow n$}{
-  \For{$i = 1 \rightarrow n$}{
-  \For{$j = 1 \rightarrow n$}{
-  \If{$M_{i, j} > M_{i, k} + M_{k, j}$}{
- 
-    $M_{i, j} \leftarrow M_{i, k} + M_{k, j}$ 
- }
- }
- }
- }
- 
- \caption[alg:fw1]{The Floyd-Warshall (FW) algorithm}
-\end{algorithm}
-
-A C implementation of this algorithm can be found \href{https://github.com/firaja/Parallel-FloydWarshall/blob/master/sequential.c}{here};
-it is also referred in this document as \emph{sequential} implementation and it is used as base version when comparing to parallel implementations. \par \par
-
-
-
-In particular we define the \emph{speedup} ($S$) of a given version $v$ of the algorithm as it follows:
-
-\[S = \frac{T_{s}}{T_{v}}\]
-
-where $T_v$ is the execution time of the version $v$ of FW and $T_s$ is the execution time of the \emph{sequential} version.
-
-It is easy to notice that that the nested $i$ and $j$ for-loops are totally independent and therefore parallelizable.
-
-
-\section{Parallel Programming Environments}
-
-\section{Computational Platforms and Software Libraries}
-This section describes technical details about the implementation of the solutions exposed in this document. It also contains
-the collected data under analysis.
-\subsection{Sequential implementation}
-The \emph{sequential} version of the FW algorithm can be found \href{https://github.com/firaja/Parallel-FloydWarshall/blob/master/sequential.c}{here}. 
-The program is compiled as it follows:
-\begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
-$ gcc sequential.c -o sequential.out -O3
-\end{lstlisting}
-
-notice the \texttt{-O3} flag that makes the program run $3.5$ times faster.
-The program accepts 2 arguments:
-\begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
-$ ./sequential.out <v> <d>
-\end{lstlisting}
-where \texttt{v} is the number of verteces, expressed ad positive integer, and \texttt{d} is the density of the presence of edges, expressed as an integer from 0 to 100.
-\par
-The \texttt{gcc} version used for this work is 7.5.0 and the program ran on a Intel Core i7-9700K. \\
-Table \ref{tab:seq-time} shows the execution time (expressed in milliseconds) depending on the number of vertices.
-
-
-\begin{table}[h!]
-\centering
-\begin{tabular}{|r|r|}
-\hline
-\rowcolor[HTML]{3166FF} 
-{\color[HTML]{FFFFFF} \textbf{Vertices}} & {\color[HTML]{FFFFFF} \textbf{Execution time (ms)}} \\ \hline
-1000                                     & 1095                                                \\ \hline
-2000                                     & 8860                                                \\ \hline
-5000                                     & 138643                                              \\ \hline
-7500                                     & 468750                                              \\ \hline
-10000                                    & 1112111                                             \\ \hline
-12500                                    & 2170138                                             \\ \hline
-\end{tabular}
-\caption{Execution time of the \emph{sequential} FW}                                                                                                                                            
-\label{tab:seq-time} 
-\end{table}
-
-Figure \ref{fig:seq-time} shows the trend of the execution time. 
-
-\begin{figure}[h!]
-\centering                                                                        
-\includegraphics[width=3in]{images/seq-time}
-\captionsetup{justification=centering,margin=2cm}                                                                                                                                   
-\caption{Trend of the execution time based on Table \ref{tab:seq-time}}                                                                                                                                            
-\label{fig:seq-time}                                                                                                                                                           
-\end{figure}
-
-
-It is easy to notice that the graph represents a 
-third grade curve; this is the interpolated function starting from the collected data:
-\[f(n) = 2.22n^3 - 18.83n^2 + 92.14n -94.84 \approx \Theta(n^3) \]
-
-
-
-\subsection{MPI implementation}
-
-The \emph{MPI} version of the FW algorithm can be found \href{https://github.com/firaja/Parallel-FloydWarshall/blob/master/mpi.c}{here}. 
-The program is compiled as it follows:
-
-\begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
-$ mpicc -g -Wall mpi.c -o mpi.out -O3
-\end{lstlisting}
-Like the \emph{sequential} version, the program accepts 2 arguments:
-\begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
-$ mpirun -np <p> mpi.out <v> <d>
-\end{lstlisting}
-The \texttt{MPI} version used for this work is 2.1.1 and the program ran on a cluster of 8 nodes over a LAN. \\
-Table \ref{tab:mpi-time} shows the execution time (expressed in milliseconds) and the percentage of time spent in initialization and communication, depending on the number of processors; 
-the program computes the \emph{APSP} problem for 5040 vertices.
-
-\begin{table}[h!]
-\centering
-\begin{tabular}{|r|r|r|}
-\hline
-\rowcolor[HTML]{F56B00} 
-{\color[HTML]{FFFFFF} \textbf{Processors}} & {\color[HTML]{FFFFFF} \textbf{Execution time (ms)}} & {\color[HTML]{FFFFFF} \textbf{MPI \%}} \\ \hline
-1                                          & 90842                                               & 0.06                                 \\ \hline
-2                                          & 46608                                               & 2.57                                 \\ \hline
-3                                          & 30718                                               & 4.45                                \\ \hline
-4                                          & 24457                                               & 5.47                                \\ \hline
-5                                          & 20200                                               & 6.95                                 \\ \hline
-6                                          & 17403                                               & 8.35                                \\ \hline
-7                                          & 15563                                               & 9.12                                 \\ \hline
-8                                          & 13812                                               & 10.1                                \\ \hline
-\end{tabular}
-\caption{Execution time of the \emph{MPI} FW}                                                                                                                                            
-\label{tab:mpi-time}
-\end{table}
 
 
 
 
-\subsection{OpenMP implementation}
-The \emph{MPI} version of the FW algorithm can be found \href{https://github.com/firaja/Parallel-FloydWarshall/blob/master/openmp.c}{here}. 
-The program is compiled as it follows:
-\begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
-$ g++ -fopenmp openmp.c -o openmp.out -O3
-\end{lstlisting}
-Unlike the \emph{sequential} version, the program accepts 3 arguments:
-\begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
-$ ./openmp.out <v> <d> <t>
-\end{lstlisting}
-where \texttt{t} is the number of threads OpenMP can use for parallelization. \\
-The \texttt{gcc} version used for this work is 7.5.0 and the program ran on a Intel Core i7-9700K, which has 8 core with no Hyper-Threading.
-Table \ref{tab:omp-time} shows the execution time (expressed in milliseconds) depending on the number of vertices and available cores.
+\input{intro}
 
-\begin{table}[h!]
-\centering
-\begin{tabular}{|r|r|r|r|}
-\hline
-\rowcolor[HTML]{CB0000} 
-\multicolumn{1}{|c|}{\cellcolor[HTML]{CB0000}{\color[HTML]{FFFFFF} \textbf{Vertices}}} & \multicolumn{1}{c|}{\cellcolor[HTML]{CB0000}{\color[HTML]{FFFFFF} \textbf{x2 threads (ms)}}} & \multicolumn{1}{c|}{\cellcolor[HTML]{CB0000}{\color[HTML]{FFFFFF} \textbf{x4 threads (ms)}}} & \multicolumn{1}{c|}{\cellcolor[HTML]{CB0000}{\color[HTML]{FFFFFF} \textbf{x8 threads (ms)}}} \\ \hline
-1000                                                                                   & 541                                                                                          & 364                                                                                          & 158                                                                                          \\ \hline
-2000                                                                                   & 4365                                                                                         & 2921                                                                                         & 1260                                                                                         \\ \hline
-5000                                                                                   & 69590                                                                                        & 46443                                                                                        & 19496                                                                                        \\ \hline
-7500                                                                                   & 230260                                                                                       & 155531                                                                                       & 65118                                                                                        \\ \hline
-10000                                                                                  & 543900                                                                                       & 367434                                                                                       & 153682                                                                                       \\ \hline
-12500                                                                                  & 1063129                                                                                      & 716363                                                                                       & 299006                                                                                       \\ \hline
-\end{tabular}
-\caption{Execution time of the \emph{OpenMP} FW}                                                                                                                                            
-\label{tab:omp-time}
-\end{table}
+\input{methodology}
 
-\subsection{CUDA implementation}
+\input{implementations}
+
+
+
+
+\end{document}
 
 \bibliographystyle{ieeetr}
 \bibliography{Bibliography}
-\end{document}

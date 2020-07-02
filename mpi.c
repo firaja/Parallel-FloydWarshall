@@ -184,7 +184,6 @@ void floydWarshall(int matrix[], int n, int rank, int processes)
 	int k, i, j, temp;
 	int* kRow = malloc(n*sizeof(int));
 	int section = n / processes;
-
 	for (k = 0; k < n; k++) 
 	{
 		

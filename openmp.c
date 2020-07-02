@@ -64,11 +64,10 @@ void floydWarshall(int** matrix, uint n, int threads)
 {
 	uint i, j, k;
 	#pragma omp parallel num_threads(threads) private(k) shared(matrix)
-	{
-		
+	{	
 		for(k = 0; k < n; k++)
 		{	
-			#pragma omp for private(i, j) collapse(2)
+			#pragma omp for private(i, j) schedule(dynamic)
 			for(i = 0; i < n; i++)
 			{
 				for(j = 0; j < n; j++)
