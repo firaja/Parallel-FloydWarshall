@@ -6,60 +6,94 @@ In this section we describe three strategies to overcome the iniefficiency due t
 \subsection{Distributed with MPI}
 
 ....
+The main strategy is based on scattering the whole matrix among all the process, so that
+each process can read a portion of the matrix of size $\frac{n^2}{p}$; then a \emph{process of competence}
+is chosen: as $k$ is in common (but never transmitted) to all the processes, there's always a cell in the $k$th
+row representing one of the two intermediate vertices for any process and there's always one process to which this row was assigned.
+The value $k$ is always "synchronized" between process because each for-loop involving $k$ starts with a collective communication
+which implies a synchronization point among processes.
 
+\begin{figure}[h!]
+\centering                                                                        
+\includegraphics[width=3.5in]{diagrams/mpi-scatter}
+\captionsetup{justification=centering}                                                                                                                                   
+\caption{View of the data each thread can reach}                                                                                                                                            
+\label{fig:threads}                                                                                                                                                           
+\end{figure}
+Everytime $k$ changes, the $k$th row is broadcasted to the other processes by the process that owns the row;
+a total of $k$ \texttt{MPI\_Bcast} operations are required. \par
+Once the $k$th row has been received, each process acts like the original FW in the $i$ and $j$ for-loops; obviously
+they each write values in their own local matrix. \par
 
+At the end of the $k$ for-loop, all the local matrices are gathered to the root process. \par
+We can list all the communication required:
+\begin{itemize}
+\item{1 \texttt{MPI\_Bcast} for communicating the value of $n$}
+\item{1 \texttt{MPI\_Scatter} for the assignment of the local sub-matrix}
+\item{$k$ \texttt{MPI\_Bcast} for communicating the $k$th row}
+\item{1 \texttt{MPI\_Gather} for the collection of the local sub-matrix}
+\end{itemize}
 
-\begin{lstlisting}[style=CStyle]
-...
-int processes, rank;
+\textbf{Table \ref*{tab:comm}} approximates how many bytes are involved in the communications, assuming that
+the implementation uses 4 bytes to store one \texttt{int} and omitting the overhead of the communication protocol.
+\begin{table}[h!]
+\centering
+\begin{tabular}{|l|l|l|}
+\hline
+\rowcolor[HTML]{F56B00} 
+{\color[HTML]{FFFFFF} \textbf{Count}} & {\color[HTML]{FFFFFF} \textbf{Type}} & {\color[HTML]{FFFFFF} \textbf{Size}} \\ \hline
+1                                     &  \texttt{MPI\_Bcast}                 &  $4(p-1)$ bytes                      \\ \hline
+1                                     &  \texttt{MPI\_Scatter}               &  $4\frac{n^2(p-1)}{p}$ bytes         \\ \hline
+$k = n$                               &  \texttt{MPI\_Bcast}                 &  $4n^2(p-1)$ bytes                    \\ \hline
+1                                     &  \texttt{MPI\_Gather}                &  $4\frac{n^2(p-1)}{p}$ bytes         \\ \hline
+\end{tabular}
+\caption{Execution time of the \emph{MPI} FW}                                                                                                                                            
+\label{tab:comm}
+\end{table}
+\par
 
-MPI_Init(&argc, &argv);
+Total communications can be expressed with the following formula, that can help to calculate the bandwidth of the network
+for this implementation:
+\[W_{comm} = 4(p-1)(1 + n^2(1 + \frac{2}{p})) \text{ bytes}\]
+This formula is important because the time spent on communications is time taken from the calculation and a network with an inadequate
+bandwith is the main source of bottlenecks. For example having 8 processes consuming a $125000 \times 125000$ matrix implies a total of
+$\textasciitilde 5.46$GB transferred  over the entire network; this means that each processor would theorically spend $5468$ms (43 seconds in total) on communication over a 1Gbps network.
 
-MPI_Comm_size(MPI_COMM_WORLD, &processes);
-MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+\begin{figure}[h!]
+\centering                                                                        
+\includegraphics[width=3.5in]{diagrams/mpi-time}
+\captionsetup{justification=centering}                                                                                                                                   
+\caption{Calculation and MPI instantiation + communication time of \emph{MPI} FW consuming a $5040\times5040$ matrix over a 1Gbps network depending on the number of processes}
+\label{fig:mpi-time}                                                                                                                                                           
+\end{figure}
 
-MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
+\textbf{Figure \ref*{fig:mpi-time}} shows the amount of time taken to initialize the MPI cluster and communicate during the execution of the \emph{MPI} FW. In this case a dense 
+$5040\times5040$ matrix is used for input and the MPI cluster was located in a star network with 1Gbps bandwith.
 
-populateMatrix(matrix, n, density, rank, processes);
+The overhead has a quadratic or linear growth with respect to the number of vertices and or the number of processes respectively; 
+so with a medium-small matrix the time used in communication can exceed the 10\% of the total computational time. 
+But by increasing the size of the matrix to $12600\times12600$ the time used in communication drops to 4\%, with a total of 50 seconds. Thus the implementation fits well for huge matrixes, rather 
+than medium ones.
 
-int k, i, j, temp;
-int* kRow = malloc(n*sizeof(int));
-int section = n / processes;
+For this reason the speedup is considerable but far from the ideal for a $5040\times5040$ matrix. \textbf{Figure \ref*{fig:mpi-speedup}} shows the trend of the speedup in relation to the 
+sequential version.
 
-for (k = 0; k < n; k++) 
-{
-	
-	castKRow(matrix, n, section, kRow, k, rank);
-	
-	for (i = 0; i < section; i++)
-	{
-		for (j = 0; j < n; j++) 
-		{
-			temp = matrix[i * n + k] + kRow[j];
-			if (temp < matrix[i * n + j])
-			{
-				matrix[i * n + j] = temp;
-			}
-		}
-	}
-}
+\begin{figure}[h!]
+\centering                                                                        
+\includegraphics[width=3.5in]{diagrams/mpi-speedup}
+\captionsetup{justification=centering}                                                                                                                                   
+\caption{Speedup of \emph{MPI} FW}                                                                                                                                            
+\label{fig:mpi-speedup}                                                                                                                                                           
+\end{figure}
 
-gatherResult(matrix, n, rank, processes);
-\end{lstlisting}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+With a consequent decrease in efficiency as shown in \textbf{Figure \ref*{fig:mpi-efficiency}}
+\begin{figure}[h!]
+\centering                                                                        
+\includegraphics[width=3.5in]{diagrams/mpi-efficiency}
+\captionsetup{justification=centering}                                                                                                                                   
+\caption{Efficiency of \emph{MPI} FW consuming a medium matrix}                                                                                                                                            
+\label{fig:mpi-efficiency}                                                                                                                                                           
+\end{figure}
 
 
 
@@ -178,8 +212,8 @@ density of the edges may vary and the compiler cannot foresee the content of the
 Also note that the solution does not implement a \texttt{collapse} directive like this:
 \begin{lstlisting}[style=CStyle]
 ...
-#pragma omp for ... collapse(3)
-for(k = 0; k < n; k++) {			
+for(k = 0; k < n; k++) {
+	#pragma omp for ... collapse(2)			
 	for(i = 0; i < n; i++) {
 		for(j = 0; j < n; j++) {
 			...
@@ -187,9 +221,9 @@ for(k = 0; k < n; k++) {
 	}
 }
 \end{lstlisting}
-that's because when we collapse a multiple loops, OpenMP turns the into a single loop: there is a single
-index that is constructed from \texttt{i}, \texttt{i} and \texttt{k} using division and modulo operations. This can
-have huge impact on the performance because of the overhead, especially if the matrix is really wide.
+that's because when we collapse multiple loops, OpenMP turns them into a single loop: there is one
+index that is constructed from \texttt{i} and \texttt{j} using division and modulo operations. This can
+have huge impacts on the performance because of this overhead, especially if the matrix is really wide.
 
 \textbf{Figure \ref*{fig:threads}} shows how 2 threads interact inside the matrix: the red and orange zones highlight the cells where
 Thread 1 and Thread 2 can write respectively; the blue and turquise cells represent the intermediate vertices that are compared
@@ -343,3 +377,5 @@ An overview of the timings collected can be found in \textbf{Table \ref*{tab:omp
 
 
 \subsection{GPGPU with CUDA}
+...
+

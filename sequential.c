@@ -63,7 +63,7 @@ void floydWarshall(int** matrix, uint n)
 			for(j = 0; j < n; j++)
 			{
 				
-				if(matrix[i][j] > matrix[i][k] + matrix[k][j] || matrix[i][j] == 0)
+				if(matrix[i][j] > matrix[i][k] + matrix[k][j])
 				{
 					matrix[i][j] = matrix[i][k] + matrix[k][j];
 				}

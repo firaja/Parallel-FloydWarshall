@@ -87,37 +87,19 @@ __global__ void wakeGPU(int reps)
 	}
 }
 
-__global__ void floydWarshallKernel(int k, int *G, int N)
+__global__ void floydWarshallKernel(int u, int *G, int n)
 {
-	int col = blockIdx.x * blockDim.x + threadIdx.x;
-	if(col >= N)
-	{
-		return;
-	}
-	int idx = N * blockIdx.y + col;
+	int v1 = blockDim.y * blockIdx.y + threadIdx.y;
+	int v2 = blockDim.x * blockIdx.x + threadIdx.x;
 
-	__shared__ int best;
-
-	if(threadIdx.x == 0)
+	if (v1 < n && v2 < n) 
 	{
-		best=G[N * blockIdx.y + k];
-	}
-
-	__syncthreads();
-
-	if(best == INFINITY)
-	{
-		return;
-	}
-	int tmp_b = G[k * N + col];
-	if(tmp_b == INFINITY)
-	{
-		return;
-	}
-	int cur = best + tmp_b;
-	if(cur < G[idx])
-	{
-		G[idx] = cur;
+		int newPath = G[v1 * n + u] + G[u * n + v2];
+		int oldPath = G[v1 * n + v2];
+		if (oldPath > newPath)
+		{
+			G[v1 * n + v2] = newPath;		
+		}
 	}
 }
 
@@ -127,43 +109,22 @@ void floydWarshall(int *matrix, const int n, int bsize)
 	int *deviceMatrix;
 	int size = n * n * sizeof(int);
 
-	cudaError_t err = cudaMalloc((int **) &deviceMatrix, size);
-	if(err != cudaSuccess)
-	{
-		printf("%s in %s at line %d\n", cudaGetErrorString(err), __FILE__ ,__LINE__);
-	}
-	
-
-	err=cudaMemcpy(deviceMatrix, matrix, size, cudaMemcpyHostToDevice);
-	if(err != cudaSuccess)
-	{
-		printf("%s in %s at line %d\n", cudaGetErrorString(err), __FILE__, __LINE__);
-	}
+	cudaMalloc((int **) &deviceMatrix, size);	
+	cudaMemcpy(deviceMatrix, matrix, size, cudaMemcpyHostToDevice);
 	
 
 	dim3 dimGrid((n + bsize - 1) / bsize, n);
 
+	cudaFuncSetCacheConfig(floydWarshallKernel, cudaFuncCachePreferL1);
 	for(int k = 0; k < n; k++)
 	{
 		floydWarshallKernel<<<dimGrid, bsize>>>(k, deviceMatrix, n);
-		err = cudaDeviceSynchronize();
-		if(err != cudaSuccess)
-		{
-			printf("%s in %s at line %d\n", cudaGetErrorString(err), __FILE__, __LINE__);
-		}
 	}
+	cudaDeviceSynchronize();
 
-	err = cudaMemcpy(matrix, deviceMatrix, size, cudaMemcpyDeviceToHost);
-	if(err != cudaSuccess)
-	{
-		printf("%s in %s at line %d\n", cudaGetErrorString(err), __FILE__, __LINE__);
-	}
+	cudaMemcpy(matrix, deviceMatrix, size, cudaMemcpyDeviceToHost);
 
-	err = cudaFree(deviceMatrix);
-	if(err != cudaSuccess)
-	{
-		printf("%s in %s at line %d\n", cudaGetErrorString(err),__FILE__,__LINE__);
-	}
+	cudaFree(deviceMatrix);
 }
 
 void showDistances(int matrix[], int n)

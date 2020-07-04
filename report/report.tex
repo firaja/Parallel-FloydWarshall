@@ -14,7 +14,7 @@
 \usepackage{listings}
 \usepackage{amsmath}
 \usepackage{mathabx}
-\newfontfamily\listingsfont[Scale=.7]{Ubuntu}\usepackage[font=small,labelfont=bf]{caption}
+\newfontfamily\listingsfont[Scale=.7]{Ubuntu}\usepackage[font=footnotesize,labelfont=bf]{caption}
 \usepackage[table,xcdraw]{xcolor}
 \usepackage[utf8]{inputenc}
 \title{Parallelization of the Floyd-Warshall algorithm}
@@ -39,7 +39,7 @@
     breaklines=true,                 
     captionpos=b,                    
     keepspaces=true,                 
-    numbers=left,                    
+    numbers=none,                    
     numbersep=5pt,                  
     showspaces=false,                
     showstringspaces=false,
@@ -61,7 +61,7 @@ of the parallelized algorithms on modern multicore and distributed platforms, an
 to significantly accelerate FW performance utilizing the full capacity provided by the architectures used.
 \end{abstract}
 
-
+todo: descrizione openmp, cude, mpiP, wakeupGPU
 
 
 \input{intro}
