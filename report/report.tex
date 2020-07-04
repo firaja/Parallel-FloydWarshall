@@ -15,6 +15,7 @@
 \usepackage{amsmath}
 \usepackage{mathabx}
 \newfontfamily\listingsfont[Scale=.7]{Ubuntu}\usepackage[font=footnotesize,labelfont=bf]{caption}
+\captionsetup[algorithm2e]{font=footnotesize}
 \usepackage[table,xcdraw]{xcolor}
 \usepackage[utf8]{inputenc}
 \title{Parallelization of the Floyd-Warshall algorithm}
@@ -32,6 +33,8 @@
     backgroundcolor=\color{backgroundColour},   
     commentstyle=\color{mGreen},
     keywordstyle=\color{magenta},
+    keywordstyle=[2]{\color{lime}},
+    morekeywords=[2]{;},
     numberstyle=\tiny\color{mGray},
     stringstyle=\color{mPurple},
     basicstyle=\linespread{1}\listingsfont,
@@ -45,7 +48,7 @@
     showstringspaces=false,
     showtabs=false,                  
     tabsize=2,
-    language=C,
+    language=C++
 }
 
 \begin{document}
@@ -61,7 +64,7 @@ of the parallelized algorithms on modern multicore and distributed platforms, an
 to significantly accelerate FW performance utilizing the full capacity provided by the architectures used.
 \end{abstract}
 
-todo: descrizione openmp, cude, mpiP, wakeupGPU
+todo: descrizione openmp, cuda, mpiP, wakeupGPU, timings, usi
 
 
 \input{intro}

@@ -12,35 +12,34 @@
 
 
 __global__ void wakeGPU(int reps);
-__global__ void floydWarshallKernel(int k, int *G, int N);
+__global__ void floydWarshallKernel(int k, int *matrix, int n);
 
-void floydWarshall(int *matrix, const int N, int bsize);
+void floydWarshall(int *matrix, int n, int threadsPerBlock);
 void populateMatrix(int *matrix, int n, int density);
 void showDistances(int matrix[], int n);
+int iDivUp(int a, int b);
 
 
 
 int main(int argc, char* argv[])
 {
-	int n, density, bsize;
+	int n, density, threadsPerBlock;
 
 	if(argc <= 3)
 	{
 		n = DEFAULT;
 		density = 100;
-		bsize = BLOCK_SIZE;
+		threadsPerBlock = BLOCK_SIZE;
 	}
 	else
 	{
 		n = atoi(argv[1]);
 		density = atoi(argv[2]);
-		bsize = atoi(argv[3]);
+		threadsPerBlock = atoi(argv[3]);
 	}
 
 	
-	const int size = n * n * sizeof(int);
-
-	printf("%d %d %d", n, density, bsize);
+	int size = n * n * sizeof(int);
 		
 	int* matrix = (int *) malloc(size);
 
@@ -53,11 +52,11 @@ int main(int argc, char* argv[])
 	cudaEventCreate(&start);
 	cudaEventCreate(&stop);
 
-	wakeGPU<<<1, bsize>>>(32);
+	wakeGPU<<<1, threadsPerBlock>>>(32);
 
 	cudaEventRecord(start);
 
-	floydWarshall(matrix, n, bsize);
+	floydWarshall(matrix, n, threadsPerBlock);
 
 	cudaEventRecord(stop);
 
@@ -87,24 +86,7 @@ __global__ void wakeGPU(int reps)
 	}
 }
 
-__global__ void floydWarshallKernel(int u, int *G, int n)
-{
-	int v1 = blockDim.y * blockIdx.y + threadIdx.y;
-	int v2 = blockDim.x * blockIdx.x + threadIdx.x;
-
-	if (v1 < n && v2 < n) 
-	{
-		int newPath = G[v1 * n + u] + G[u * n + v2];
-		int oldPath = G[v1 * n + v2];
-		if (oldPath > newPath)
-		{
-			G[v1 * n + v2] = newPath;		
-		}
-	}
-}
-
-
-void floydWarshall(int *matrix, const int n, int bsize)
+void floydWarshall(int *matrix, const int n, int threadsPerBlock)
 {
 	int *deviceMatrix;
 	int size = n * n * sizeof(int);
@@ -113,18 +95,37 @@ void floydWarshall(int *matrix, const int n, int bsize)
 	cudaMemcpy(deviceMatrix, matrix, size, cudaMemcpyHostToDevice);
 	
 
-	dim3 dimGrid((n + bsize - 1) / bsize, n);
-
-	cudaFuncSetCacheConfig(floydWarshallKernel, cudaFuncCachePreferL1);
 	for(int k = 0; k < n; k++)
 	{
-		floydWarshallKernel<<<dimGrid, bsize>>>(k, deviceMatrix, n);
+		floydWarshallKernel<<<dim3(iDivUp(n, threadsPerBlock), n), threadsPerBlock>>>(k, deviceMatrix, n);
 	}
 	cudaDeviceSynchronize();
 
 	cudaMemcpy(matrix, deviceMatrix, size, cudaMemcpyDeviceToHost);
 
 	cudaFree(deviceMatrix);
+
+	cudaError err = cudaGetLastError();
+	if(err != cudaSuccess)
+	{
+		fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(err), __FILE__, __LINE__);
+	}
+}
+
+__global__ void floydWarshallKernel(int k, int *matrix, int n)
+{
+	int y = blockDim.y * blockIdx.y + threadIdx.y;
+	int x = blockDim.x * blockIdx.x + threadIdx.x;
+
+	if (y < n && x < n) 
+	{
+		int newPath = matrix[y * n + k] + matrix[k * n + x];
+		int oldPath = matrix[y * n + x];
+		if (oldPath > newPath)
+		{
+			matrix[y * n + x] = newPath;		
+		}
+	}
 }
 
 void showDistances(int matrix[], int n)
@@ -185,4 +186,9 @@ void populateMatrix(int *matrix, int n, int density)
 
 		}
 	}
+}
+
+int iDivUp(int a, int b)
+{ 
+	return ((a % b) != 0) ? (a / b + 1) : (a / b); 
 }

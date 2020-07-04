@@ -25,7 +25,35 @@ a total of $k$ \texttt{MPI\_Bcast} operations are required. \par
 Once the $k$th row has been received, each process acts like the original FW in the $i$ and $j$ for-loops; obviously
 they each write values in their own local matrix. \par
 
-At the end of the $k$ for-loop, all the local matrices are gathered to the root process. \par
+At the end of the $k$ for-loop, all the local matrices are gathered to the root process. 
+\textbf{Algorithm \ref*{alg:mpi}} shows an high level implementation of the strategy exposed above.\par
+
+\begin{algorithm}[h!]
+
+\SetAlgoLined
+
+broadcast($n$, $ROOT$) \\
+scatter($matrix$, $processes$)
+
+\For{$k = 1 \rightarrow n$}{
+	\If{$rank =$ \textnormal{findOwnerOfKthRow}($k$, $rank$)}{
+		$K \leftarrow $ getRow($matrix$, $k$) \\
+		broadcast($K$, $owner$) \\
+	}
+	\For{$i = 1 \rightarrow \frac{n}{processes}$}{
+		\For{$j = 1 \rightarrow n$}{
+			\If{$M_{i,j} < M_{i,k} + K_j$)}{
+				$M_{i,j} \leftarrow M_{i,k} + K_j$
+			}
+		}
+	}
+}
+gather(matrix, processes);
+ 
+\caption{Distributed version of FW}\label{alg:mpi}
+\end{algorithm}
+
+
 We can list all the communication required:
 \begin{itemize}
 \item{1 \texttt{MPI\_Bcast} for communicating the value of $n$}
@@ -193,12 +221,12 @@ by each thread indipendentely.
 
 \begin{lstlisting}[style=CStyle]
 int i, j, k;
-#pragma omp parallel num_threads(t) shared(M) private(k) {
+#pragma omp parallel num_threads(t) shared(M, k) {
 	for(k = 0; k < n; k++) {
 		#pragma omp for private(i,j) schedule(dynamic)			
 		for(i = 0; i < n; i++) {
 			for(j = 0; j < n; j++) {
-				if(M[i][j] > M[i][k] + M[k][j] || M[i][j] == 0) {
+				if(M[i][j] > M[i][k] + M[k][j]) {
 					M[i][j] = M[i][k] + M[k][j];
 				}
 			}
@@ -379,3 +407,10 @@ An overview of the timings collected can be found in \textbf{Table \ref*{tab:omp
 \subsection{GPGPU with CUDA}
 ...
 
+\begin{figure}[h!]
+\centering                                                                        
+\includegraphics[width=3.5in]{diagrams/cuda-time}
+\captionsetup{justification=centering}                                                                                                                                   
+\caption{Efficiency of \emph{MPI} FW consuming a medium matrix}                                                                                                                                            
+\label{fig:cuda-time}                                                                                                                                                           
+\end{figure}
