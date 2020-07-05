@@ -1,0 +1,17 @@
+\section{Terminology}
+In this document we use specific terms that refer to specific definitions. Such terms are \emph{emphasized} in order to distingiush them from everyday terms
+and we listed them in this section, which acts as a dictionary. 
+\subsubsection*{Edge/cell under analysis} 
+The edge/cell in the distance matrix selected by FW for a given $i$ and $j$.  
+\subsubsection*{Intermediate edges} 
+The two edges whose sum must be compared with the edge \emph{under analysis} (line 10 of \textbf{Algorithm \ref*{alg:fw1}}).
+\subsubsection*{Serial FW} 
+The implementation of FW as show in \textbf{Algorithm \ref*{alg:fw1}}: the execution is handled by a singe process/thread.
+\subsubsection*{Speedup}
+For a given implementation $v$, it is defined as follows:
+\[S_{v} = \frac{T_{s}}{T_{v}}\]
+where $T_v$ is the execution time of the version $v$ of FW and $T_s$ is the execution time of the \emph{serial FW}. 
+\subsubsection*{Efficiency}
+For a given implementation $v$, it is defined as follows:
+\[E_v = \frac{S_v}{p}\]
+where $S_v$ is the speedup of version $v$ of FW and $p$ is the number of processor units involved in the computation; the closer $E_v$ remains to $1$ while increasing $p$, the better.

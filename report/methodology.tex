@@ -1,7 +1,61 @@
 \section{Methodology}
-It is easy to notice that that the nested $i$ and $j$ for-loops in Alg. \ref*{alg:fw1} are totally independent and therefore parallelizable. \\
-In this section we describe three strategies to overcome the iniefficiency due to a mono-thread computation.
+\subsection{Strategy}
+It's easy to notice that that the nested $i$ and $j$ for-loops in \textbf{Algorithm \ref*{alg:fw1}} might be parallizable, but one of the \emph{intermediate edges} for a process
+could be the \emph{edge under analysis} for another process. For example process $P^1$ is writing in a cell while process $P^2$ is reading from the same cell, leading to a unpredictable final result
+if $P^1$'s writing comes before or after $P^2$'s reading.
 
+It seems that enabling parallelization requires some sort of blocking mechanism between processes, like a semaphore, but we prove that no data race can occur as in the previous example as far as $k$
+is shared between processes. 
+
+Let's assume we have 2 processes, namely $P^1$ and $P^2$ and they have \emph{under analisys} $M_{i,j}$ and $M_{x,y}$ respectively, with $x \neq i$. 
+At any point the following system of preconditions exists (the two inequalities are taken from \textbf{Algorithm \ref*{alg:fw1}} at line 10):
+
+\begin{flalign}\label{eq:sys1}
+ &&  \left\{\begin{matrix}
+P^{1}_{i,j} & > & P^{1}_{i,k} & + & P^{1}_{k,j} \\
+\\ 
+P^{2}_{x,y} & > & P^{2}_{x,k} & + & P^{2}_{k,y}
+\end{matrix}\right. &&
+\end{flalign}
+
+\emph{i.e.} $P^1$ is reading values of $M_{i,k}$ and $M_{k,j}$ so it can decide if $M_{i,j}$ should be overwritten; 
+the same does $P^2$ with $M_{x,k}$, $M_{k,y}$ and $M_{x,y}$ respectively. \\
+In order to have a data race, the following must be true as well
+
+\[(x = i \wedge k=j) \vee (k = i \wedge y = j)\]
+
+\emph{i.e.} $P^2$ is using as one of its \emph{intermediate edges} the \emph{edge under analysis} of $P^1$. Without losing
+of generality we do not analyze the opposite case because the proof develops symmetrically.\\
+Because $x \neq i$, only the following must be verified
+
+\begin{flalign}\label{eq:cond1}
+ &&  k = i \wedge y = j &&
+\end{flalign}
+and by applying (\ref*{eq:cond1}) to (\ref*{eq:sys1}) we have
+
+\begin{flalign}\label{eq:sys2}
+ &&  P^{1}_{i,j} > P^{1}_{k,k} + P^{1}_{i,j} &&
+\end{flalign}
+but (\ref*{eq:sys2}) is clearly false, because $M$ is a hollow matrix \emph{i.e.} the  diagonal elements are all equal to $0$, leaving the 
+following inequality:
+\begin{flalign}\label{eq:sys3}
+ &&  P^{1}_{i,j} > P^{1}_{i,j} &&
+\end{flalign}
+Clearly no number can be greater than itself and this means that at this point the comparison made by $P^1$ is irrilevant
+and is always evalueted false. If $P^2$ writes after or before $P^1$'s evaluation does not really matter and thus 
+there is no data race as far as $k$ is the same for all the processes.
+
+This is really important because it assures that there is no need for locking mechanism on $M$ when it comes to
+parallelize the nested $i$ and $j$ for-loops and having no blocks guarantees better performance.
+
+So the strategy relies on dividing the matrix by rows and assigning an equal number of rows to each process.
+Once $k$ is set and it's shared among all processes, each process puts \emph{under analysis} every cell
+of its sub-matrix and selects its \emph{intermediate edges} depending on $k$.
+
+In this work we propose 3 parallel architectures implemented with 3 different parallel programming environments: 
+\emph{Distributed computing} with MPI, \emph{Mutithreading} with OpenMP and \emph{GPGPU} with CUDA.
+
+The document analyzes each implementation and gives an overview of timings, implementations and pros and cons for each case.
 
 \subsection{Distributed with MPI}
 
@@ -33,11 +87,11 @@ At the end of the $k$ for-loop, all the local matrices are gathered to the root 
 \SetAlgoLined
 
 broadcast($n$, $ROOT$) \\
-scatter($matrix$, $processes$)
+scatter($M$, $processes$)
 
 \For{$k = 1 \rightarrow n$}{
 	\If{$rank =$ \textnormal{findOwnerOfKthRow}($k$, $rank$)}{
-		$K \leftarrow $ getRow($matrix$, $k$) \\
+		$K \leftarrow $ getRow($M$, $k$) \\
 		broadcast($K$, $owner$) \\
 	}
 	\For{$i = 1 \rightarrow \frac{n}{processes}$}{
@@ -48,7 +102,7 @@ scatter($matrix$, $processes$)
 		}
 	}
 }
-gather(matrix, processes);
+gather($M$, $processes$);
  
 \caption{Distributed version of FW}\label{alg:mpi}
 \end{algorithm}
@@ -265,42 +319,8 @@ with the vertice under analysis for Thread 1 and Thread 2 respectively.
 \label{fig:threads}                                                                                                                                                           
 \end{figure}
 
-It may seems that this implementation is affected by data races, because there's no lock when writing in \texttt{M} 
-and one of the intermediate cells could be the same under analysis on another thread; for example, Thread 1 could write
-in cell $M_{i,j}$ before or after that Thread 2 calculates $M_{x,j} > M_{x,i} + M_{i,j}$, making the result unpredictable.
 
-We prove that no race condition may appear in this case. Let's assume we have 2 threads, namely $T^1$ and $T^2$ and they are
-analyzing cell $(i,j)$ and $(x,y)$, with $x \neq i$. We denote the previous statement simply with $T^{1}_{i,j}$ and $T^{2}_{x,y}$.
-Having in common $k$, the two threads are now calculating the following system
-
-\begin{flalign}\label{eq:sys1}
- &&  \left\{\begin{matrix}
-T^{1}_{i,j} & > & T^{1}_{i,k} & + & T^{1}_{k,j} \\
-\\ 
-T^{2}_{x,y} & > & T^{2}_{x,k} & + & T^{2}_{k,y}
-\end{matrix}\right. &&
-\end{flalign}
-
-The two inequalities are taken from the condition of the \emph{if} condition in \textbf{Algorithm \ref*{alg:fw1}}. \\ 
-If both are true, then $T^{1}$ and $T^{2}$ are allowed to write in $M$. In order to have a data race condition, the following
-must be true
-\[(k = i \wedge y = j) \vee (x = i \wedge k=j)\]
-but since $x \neq i$, only the following must be verified
-
-\begin{flalign}\label{eq:cond1}
- &&  k = i \wedge y = j &&
-\end{flalign}
-By applying (\ref*{eq:cond1}) to (\ref*{eq:sys1}) we have
-
-\begin{flalign}\label{eq:sys2}
- &&  T^{1}_{i,j} > T^{1}_{k,k} + T^{1}_{i,j} &&
-\end{flalign}
-but (\ref*{eq:sys2}) is clearly false, because $M$ is a hollow matrix \emph{i.e.} the  diagonal elements are all equal to $0$, leaving the 
-following inequality:
-\begin{flalign}\label{eq:sys3}
- &&  T^{1}_{i,j} > T^{1}_{i,j} &&
-\end{flalign}
-Clearly no number can be greater than itself and this means that only $T^2$ may write in $M$ at this point. \\
+We prove that no race condition may appear in this case. 
 No race condition can appear if $k$ is the same among the threads and threrfore there's no need to verify atomicity of the write operation;
 the lack of OpenMP directive like \texttt{atomic} or \texttt{critical} plays in favor of performance. \par
 

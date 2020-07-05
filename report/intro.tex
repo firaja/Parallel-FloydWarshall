@@ -32,16 +32,4 @@ The FW algorithm is shown in \textbf{Algorithm \ref*{alg:fw1}}.
 \end{algorithm}
 
 A C implementation of this algorithm can be found \href{https://github.com/firaja/Parallel-FloydWarshall/blob/master/sequential.c}{here};
-this version is referred in this document as \emph{sequential} implementation and it is used as base version when comparing to parallel implementations. \par \par
-
-
-
-In particular we define the \emph{speedup} ($S$) of a given version $v$ of the algorithm as it follows:
-
-\[S = \frac{T_{s}}{T_{v}}\]
-
-where $T_v$ is the execution time of the version $v$ of FW and $T_s$ is the execution time of the \emph{sequential} version. \par
-Another important factor is the \emph{efficiency} ($E$) which describes how the solution scales well by adding processor units
-
-\[E = \frac{S}{p}\]
-where $S$ is the speedup and $p$ the number of processor units; the closer $E$ remains to $1$ while increasing $p$, the better.
+this version is referred in this document as \emph{sequential} implementation and it is used as base version when comparing to parallel implementations. \par 
