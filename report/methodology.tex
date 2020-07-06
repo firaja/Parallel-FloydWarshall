@@ -1,6 +1,6 @@
 \section{Methodology}
 \subsection{Strategy}
-It's easy to notice that that the nested $i$ and $j$ for-loops in \textbf{Algorithm \ref*{alg:fw1}} might be parallizable, but one of the \emph{intermediate edges} for a process
+It's easy to notice that the nested $i$ and $j$ for-loops in \textbf{Algorithm \ref*{alg:fw1}} can be parallizable, but one of the \emph{intermediate edges} for a process
 could be the \emph{edge under analysis} for another process. For example process $P^1$ is writing in a cell while process $P^2$ is reading from the same cell, leading to a unpredictable final result
 if $P^1$'s writing comes before or after $P^2$'s reading.
 

@@ -5,10 +5,12 @@
 #include <time.h>
 #include <omp.h>
 #include "config.h"
+#include <string.h>
 
-void showDistances(int** matrix, uint n);
-void populateMatrix(int** matrix, uint n, uint density);
-void floydWarshall(int** matrix, uint n, int threads);
+
+void showDistances(int matrix[], int n);
+void populateMatrix(int *matrix, int n, int density);
+void floydWarshall(int* matrix, uint n, int threads);
 
 
 int main(int argc, char** argv) 
@@ -29,13 +31,9 @@ int main(int argc, char** argv)
 		threads = atoi(argv[3]);
 	}
 	
-	int** matrix;
+	int* matrix;
 
-	matrix = (int**) malloc(n * sizeof(uint*));
-	for(int i = 0; i < n; i++)
-	{
-		matrix[i] = (int*) malloc(n * sizeof(uint));
-	}
+	matrix = (int*) malloc(n * n * sizeof(int));
 
 	populateMatrix(matrix, n, density);
 			
@@ -60,33 +58,35 @@ int main(int argc, char** argv)
 	return 0;
 }
 
-void floydWarshall(int** matrix, uint n, int threads)
+void floydWarshall(int* matrix, uint n, int threads)
 {
-	uint i, j, k;
-	#pragma omp parallel num_threads(threads) private(k) shared(matrix)
-	{	
-		for(k = 0; k < n; k++)
-		{	
-			#pragma omp for private(i, j) schedule(dynamic)
-			for(i = 0; i < n; i++)
-			{
-				for(j = 0; j < n; j++)
-				{
-					if(matrix[i][j] > matrix[i][k] + matrix[k][j])
-					{
-						matrix[i][j] = matrix[i][k] + matrix[k][j];
-					}
-				}
-			}
-		}
-	}
+	int i, j, k;
+
+    #pragma omp parallel num_threads(threads) private(k) shared(matrix)
+    for (k = 0; k < n; k++) 
+    {
+        #pragma omp for private(i, j) schedule(dynamic)
+        for (i = 0; i < n; i++) 
+        {
+            for (j = 0; j < n; j++) 
+            {
+                int newPath = matrix[i * n + k] + matrix[k * n + j];
+                if (matrix[i * n + j] > newPath)
+                {
+                    matrix[i * n + j] = newPath;
+                }
+            }
+        }
+    }
 }
 
-void showDistances(int** matrix, uint n) 
+
+
+void showDistances(int matrix[], int n)
 {
 	if(PRINTABLE)
 	{
-		uint i, j;
+		int i, j;
 		printf("     ");
 		for(i = 0; i < n; i++)
 		{
@@ -97,14 +97,15 @@ void showDistances(int** matrix, uint n)
 			printf("[%d]", i);
 			for(j = 0; j < n; j++)
 			{
-				if(matrix[i][j] == INF)
+				if(matrix[i * n + j] == INF)
 				{
 					printf("  inf");
 				}
 				else
 				{
-					printf("%5d", matrix[i][j]);
+					printf("%5d", matrix[i * n + j]);
 				}
+				
 			}
 			printf("\n");
 		}
@@ -112,31 +113,31 @@ void showDistances(int** matrix, uint n)
 	}
 }
 
-void populateMatrix(int** matrix, uint n, uint density)
+void populateMatrix(int *matrix, int n, int density)
 {
 	uint i, j, value;
 	srand(42);
 
-	for(i = 0; i < n; i++)
+	for (i = 0; i < n; i++)
 	{
-		for(j = 0; j < n; j++)
-		{
+		for (j = 0; j < n; j++){
 			if(i == j)
 			{
-				matrix[i][j] = 0;
+				matrix[i*n+j] = 0;
 			}
 			else
 			{
 				value = 1 + rand() % MAX;
 				if(value > density)
 				{
-					matrix[i][j] = INF;
+					matrix[i*n+j] = INF;
 				}
 				else
 				{
-					matrix[i][j] = value;
+					matrix[i*n+j] = value;
 				}
 			}
+
 		}
 	}
 }

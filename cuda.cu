@@ -94,7 +94,8 @@ void floydWarshall(int *matrix, const int n, int threadsPerBlock)
 	cudaMalloc((int **) &deviceMatrix, size);	
 	cudaMemcpy(deviceMatrix, matrix, size, cudaMemcpyHostToDevice);
 	
-
+	
+	
 	for(int k = 0; k < n; k++)
 	{
 		floydWarshallKernel<<<dim3(iDivUp(n, threadsPerBlock), n), threadsPerBlock>>>(k, deviceMatrix, n);
