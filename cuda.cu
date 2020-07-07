@@ -1,4 +1,4 @@
-// nvcc cuda.cu -o cuda.out -gencode=arch=compute_75,code=compute_75
+// nvcc cuda.cu -o cuda.out -gencode=arch=compute_75,code=compute_75 -O3
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
@@ -6,6 +6,8 @@
 #include <cuda.h>
 #include <ctime>
 #include "config.h"
+#include <math.h>
+#include <stdlib.h>
 
 #define BLOCK_SIZE 128
 
@@ -93,12 +95,15 @@ void floydWarshall(int *matrix, const int n, int threadsPerBlock)
 
 	cudaMalloc((int **) &deviceMatrix, size);	
 	cudaMemcpy(deviceMatrix, matrix, size, cudaMemcpyHostToDevice);
+
+	dim3 dimGrid(iDivUp(n, threadsPerBlock), iDivUp(n, threadsPerBlock));
+	dim3 dimBlock(threadsPerBlock, threadsPerBlock, 1);
 	
 	
 	
 	for(int k = 0; k < n; k++)
 	{
-		floydWarshallKernel<<<dim3(iDivUp(n, threadsPerBlock), n), threadsPerBlock>>>(k, deviceMatrix, n);
+		floydWarshallKernel<<<dimGrid, dimBlock>>>(k, deviceMatrix, n);
 	}
 	cudaDeviceSynchronize();
 
@@ -110,21 +115,22 @@ void floydWarshall(int *matrix, const int n, int threadsPerBlock)
 	if(err != cudaSuccess)
 	{
 		fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(err), __FILE__, __LINE__);
+		exit(EXIT_FAILURE);
 	}
 }
 
 __global__ void floydWarshallKernel(int k, int *matrix, int n)
 {
-	int y = blockDim.y * blockIdx.y + threadIdx.y;
-	int x = blockDim.x * blockIdx.x + threadIdx.x;
+	int i = blockDim.y * blockIdx.y + threadIdx.y;
+	int j = blockDim.x * blockIdx.x + threadIdx.x;
 
-	if (y < n && x < n) 
+	if (i < n && j < n) 
 	{
-		int newPath = matrix[y * n + k] + matrix[k * n + x];
-		int oldPath = matrix[y * n + x];
+		int newPath = matrix[k * n + j] + matrix[i * n + k];
+		int oldPath = matrix[i * n + j];
 		if (oldPath > newPath)
 		{
-			matrix[y * n + x] = newPath;		
+			matrix[i * n + j] = newPath;		
 		}
 	}
 }
@@ -190,6 +196,14 @@ void populateMatrix(int *matrix, int n, int density)
 }
 
 int iDivUp(int a, int b)
-{ 
-	return ((a % b) != 0) ? (a / b + 1) : (a / b); 
+{
+	int result = ceil(1.0 * a / b);
+	if(result < 1)
+	{
+		return 1;
+	}
+	else
+	{
+		return result;
+	}
 }
