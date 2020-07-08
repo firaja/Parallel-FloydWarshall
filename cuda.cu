@@ -9,7 +9,7 @@
 #include <math.h>
 #include <stdlib.h>
 
-#define BLOCK_SIZE 128
+#define BLOCK_SIZE 4
 
 
 
@@ -71,6 +71,24 @@ int main(int argc, char* argv[])
 	showDistances(matrix, n);
 
 	printf("[GPGPU] Total elapsed time %f ms\n", accum);	
+
+	// calculate theoretical occupancy
+  	int maxActiveBlocks;
+  	cudaOccupancyMaxActiveBlocksPerMultiprocessor( &maxActiveBlocks, 
+                                                 floydWarshallKernel, threadsPerBlock, 
+                                                 0);
+
+  int device;
+  cudaDeviceProp props;
+  cudaGetDevice(&device);
+  cudaGetDeviceProperties(&props, device);
+
+  float occupancy = (maxActiveBlocks * threadsPerBlock / props.warpSize) / 
+                    (float)(props.maxThreadsPerMultiProcessor / 
+                            props.warpSize);
+
+  printf("Launched blocks of size %d. Theoretical occupancy: %f\n", 
+         threadsPerBlock, occupancy);
 	
 	free(matrix);
 	
@@ -96,14 +114,12 @@ void floydWarshall(int *matrix, const int n, int threadsPerBlock)
 	cudaMalloc((int **) &deviceMatrix, size);	
 	cudaMemcpy(deviceMatrix, matrix, size, cudaMemcpyHostToDevice);
 
-	dim3 dimGrid(iDivUp(n, threadsPerBlock), iDivUp(n, threadsPerBlock));
-	dim3 dimBlock(threadsPerBlock, threadsPerBlock, 1);
+	dim3 dimGrid((n +  threadsPerBlock - 1)/threadsPerBlock, n);
 	
-	
-	
+	cudaFuncSetCacheConfig(floydWarshallKernel, cudaFuncCachePreferL1);
 	for(int k = 0; k < n; k++)
 	{
-		floydWarshallKernel<<<dimGrid, dimBlock>>>(k, deviceMatrix, n);
+		floydWarshallKernel<<<dimGrid, threadsPerBlock>>>(k, deviceMatrix, n);
 	}
 	cudaDeviceSynchronize();
 

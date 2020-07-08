@@ -1,4 +1,4 @@
-// mpicc -g -Wall mpi.c -o mpi.out && mpirun -np 5 mpi.out 20 100
+// mpicc -g -Wall mpi.c -o mpi.out -O3 && mpirun -np 5 mpi.out 20 100
 // mpicc -g -Wall mpi.c -o mpi.out -O3 -L /home/firaja/Downloads/mpiP-3.4.1/lib -lmpiP -lm -lbfd -liberty -lunwind
 #include <stdio.h>
 #include <stdlib.h>
