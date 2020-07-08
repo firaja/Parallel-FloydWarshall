@@ -138,7 +138,7 @@ Total communications can be expressed with the following formula, that can help 
 for this implementation:
 \[W_{comm} = 4(p-1)(1 + n^2(1 + \frac{2}{p})) \text{ bytes}\]
 This formula is important because the time spent on communications is time taken from the calculation and a network with an inadequate
-bandwith is the main source of bottlenecks. For example having 8 processes consuming a $125000 \times 125000$ matrix implies a total of
+bandwith is the main source of bottlenecks. For example having 8 processes consuming a $12500 \times 12500$ matrix implies a total of
 $\textasciitilde 5.46$GB transferred  over the entire network; this means that each processor would theorically spend $5468$ms (43 seconds in total) on communication over a 1Gbps network.
 
 \begin{figure}[h!]
@@ -425,12 +425,85 @@ An overview of the timings collected can be found in \textbf{Table \ref*{tab:omp
 
 
 \subsection{GPGPU with CUDA}
-...
+In recent years, many scientific and numeric GPGPU applications found success due to graphics hardware’s streaming data-parallel organizational model. With the introduction of NVIDIA G80 GPU architecture, the graphics pipeline
+now features a single unified set of processors that function as vertex, geometry, and fragment processors. Additionally, the release of the Compute Unified Device Architecture
+(CUDA) API [NVI07] on the G80 architecture allows developers to easily develop and manage general purpose scientific and numerical algorithms without formulating solutions
+in terms of nontrivial shaders and graphic primitives.
 
+
+The GPU serves, to an extent, as a coprocessor to the
+CPU programmed through the CUDA API. A single program know as a kernel is compiled to operate on the GPU
+device to exploit the massive data parallelism inherit on Single Instruction, Multiple Data (SIMD) architecture. Groups
+of threads then execute the kernel on the GPU. Threads
+are organized into blocks which allow efficient sharing of
+data through a high-speed shared memory region (16 kB in
+size) on the G80 architecture accessible to the programmer
+directly through CUDA. Shared memory is shared among
+threads in a block, facilitating higher bandwidth and overall
+performance gains. Therefore, algorithms must intelligently
+manage this ultra fast shared memory cache effectively. This
+will fully utilize the data parallelism capabilities of graphics
+hardware and alleviates any memory latency that data intensive algorithms suffer from on the GPU.
+
+Unlike the other two implementations, \emph{CUDA-FW} can rely on its \emph{grid-of-blocks} system and thus the kernel can do no loops: $k$ is still shared among threads
+so that no data race occurs but each thread instead of covering one or more rows, is assigned to a single cell. Whereas each block of threads covers horizzontally the
+entire matrix and vertically a proportional number of rows, depending on the number of threads per block.
+
+
+
+\begin{figure}[h!]
+\centering                                                                        
+\includegraphics[width=2.5in]{diagrams/cuda-threads}
+\captionsetup{justification=centering}                                                                                                                                   
+\caption{Mapping of CUDA threads inside $M$}                                                                                                                                            
+\label{fig:cuda-threads}                                                                                                                                                           
+\end{figure}
+
+
+
+
+
+\begin{algorithm}[h!]
+
+\SetAlgoLined
+
+\DontPrintSemicolon
+  \SetKwFunction{FMain}{kernel}
+  \SetKwProg{Fn}{Function}{:}{}
+  \Fn{\FMain{$M$, $n$, $k$}}{
+
+$i \leftarrow D_{y}(B) \times B_y + T_y$ \\
+$j \leftarrow D_{x}(B) \times B_x + T_x$ \\
+\If{$x < n \wedge y < n$}{
+	\If{$M_{i,j} < M_{i,k} + M_{k,j}$}{
+		$M_{i,j} \leftarrow M_{i,k} + M_{k,j}$
+	}
+}
+}
+ 
+\caption{Kernel of the \emph{CUDA-FW}}\label{alg:cuda}
+\end{algorithm}
+
+Because each thread does little computation and access memory, timings are really low if compared
+with \emph{serial-FW} and even \emph{OMP} FW with 8 cores. \\
+In fact from \textbf{Figure \ref*{fig:cuda-time}} we see a speedup up to $87.8$ times when comparing with \emph{serial} FW
+and $12.34$ with \emph{OMP} FW with 8 cores. We also notice that the maximum speedup is reached when the number of threads per block is equal to 128;
+that's because the occupancy of the Streaming Multiprocessors is at its peak and there are less threads wasted.
 \begin{figure}[h!]
 \centering                                                                        
 \includegraphics[width=3.5in]{diagrams/cuda-time}
 \captionsetup{justification=centering}                                                                                                                                   
 \caption{Efficiency of \emph{MPI} FW consuming a medium matrix}                                                                                                                                            
 \label{fig:cuda-time}                                                                                                                                                           
+\end{figure}
+
+Because the CUDA APIs don't allow the user to control the number of Streaming Multiprocessors or how many CUDA cores
+can be involved in the computation, the speedup and the efficiency are calculated based on the number of threads per block.
+
+\begin{figure}[h!]
+\centering                                                                        
+\includegraphics[width=3.5in]{diagrams/cuda-speedup}
+\captionsetup{justification=centering}                                                                                                                                   
+\caption{Speedup of \emph{CUDA} FW consuming a medium matrix compared to \emph{sequential} and \emph{OMP} FW}                                                                                                                                            
+\label{fig:cuda-speedup}                                                                                                                                                           
 \end{figure}
