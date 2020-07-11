@@ -1,4 +1,4 @@
-// nvcc cuda2.cu -o cuda2.out -gencode=arch=compute_75,code=compute_75
+// nvcc cuda2.cu -o cuda2.out -gencode=arch=compute_75,code=compute_75 -O3
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
@@ -6,41 +6,42 @@
 #include <cuda.h>
 #include <ctime>
 #include "config.h"
+#include <math.h>
+#include <stdlib.h>
 
-#define BLOCK_SIZE 128
+#define BLOCK_SIZE 4
 
 
 
 __global__ void wakeGPU(int reps);
-__global__ void floydWarshallKernel(int k, int *G, int N);
+__global__ void floydWarshallKernel(int k, int *matrix, int n);
 
-void floydWarshall(int *matrix, const int N, int bsize);
+void floydWarshall(int *matrix, int n, int threadsPerBlock);
 void populateMatrix(int *matrix, int n, int density);
 void showDistances(int matrix[], int n);
+int iDivUp(int a, int b);
 
 
 
 int main(int argc, char* argv[])
 {
-	int n, density, bsize;
+	int n, density, threadsPerBlock;
 
 	if(argc <= 3)
 	{
 		n = DEFAULT;
 		density = 100;
-		bsize = BLOCK_SIZE;
+		threadsPerBlock = BLOCK_SIZE;
 	}
 	else
 	{
 		n = atoi(argv[1]);
 		density = atoi(argv[2]);
-		bsize = atoi(argv[3]);
+		threadsPerBlock = atoi(argv[3]);
 	}
 
 	
-	const int size = n * n * sizeof(int);
-
-	printf("%d %d %d", n, density, bsize);
+	int size = n * n * sizeof(int);
 		
 	int* matrix = (int *) malloc(size);
 
@@ -53,11 +54,11 @@ int main(int argc, char* argv[])
 	cudaEventCreate(&start);
 	cudaEventCreate(&stop);
 
-	wakeGPU<<<1, bsize>>>(32);
+	wakeGPU<<<1, threadsPerBlock>>>(32);
 
 	cudaEventRecord(start);
 
-	floydWarshall(matrix, n, bsize);
+	floydWarshall(matrix, n, threadsPerBlock);
 
 	cudaEventRecord(stop);
 
@@ -70,6 +71,24 @@ int main(int argc, char* argv[])
 	showDistances(matrix, n);
 
 	printf("[GPGPU] Total elapsed time %f ms\n", accum);	
+
+	// calculate theoretical occupancy
+  	int maxActiveBlocks;
+  	cudaOccupancyMaxActiveBlocksPerMultiprocessor( &maxActiveBlocks, 
+                                                 floydWarshallKernel, threadsPerBlock, 
+                                                 0);
+
+  int device;
+  cudaDeviceProp props;
+  cudaGetDevice(&device);
+  cudaGetDeviceProperties(&props, device);
+
+  float occupancy = (maxActiveBlocks * threadsPerBlock / props.warpSize) / 
+                    (float)(props.maxThreadsPerMultiProcessor / 
+                            props.warpSize);
+
+  printf("Launched blocks of size %d. Theoretical occupancy: %f\n", 
+         threadsPerBlock, occupancy);
 	
 	free(matrix);
 	
@@ -87,82 +106,48 @@ __global__ void wakeGPU(int reps)
 	}
 }
 
-__global__ void floydWarshallKernel(int k, int *G, int N)
-{
-	int col = blockIdx.x * blockDim.x + threadIdx.x;
-	if(col >= N)
-	{
-		return;
-	}
-	int idx = N * blockIdx.y + col;
-
-	__shared__ int best;
-
-	if(threadIdx.x == 0)
-	{
-		best=G[N * blockIdx.y + k];
-	}
-
-	__syncthreads();
-
-	if(best == INFINITY)
-	{
-		return;
-	}
-	int tmp_b = G[k * N + col];
-	if(tmp_b == INFINITY)
-	{
-		return;
-	}
-	int cur = best + tmp_b;
-	if(cur < G[idx])
-	{
-		G[idx] = cur;
-	}
-}
-
-
-void floydWarshall(int *matrix, const int n, int bsize)
+void floydWarshall(int *matrix, const int n, int threadsPerBlock)
 {
 	int *deviceMatrix;
 	int size = n * n * sizeof(int);
 
-	cudaError_t err = cudaMalloc((int **) &deviceMatrix, size);
-	if(err != cudaSuccess)
-	{
-		printf("%s in %s at line %d\n", cudaGetErrorString(err), __FILE__ ,__LINE__);
-	}
+	cudaMalloc((int **) &deviceMatrix, size);	
+	cudaMemcpy(deviceMatrix, matrix, size, cudaMemcpyHostToDevice);
+
+	dim3 dimGrid((n +  threadsPerBlock - 1)/threadsPerBlock, n);
 	
-
-	err=cudaMemcpy(deviceMatrix, matrix, size, cudaMemcpyHostToDevice);
-	if(err != cudaSuccess)
-	{
-		printf("%s in %s at line %d\n", cudaGetErrorString(err), __FILE__, __LINE__);
-	}
-	
-
-	dim3 dimGrid((n + bsize - 1) / bsize, n);
-
+	cudaFuncSetCacheConfig(floydWarshallKernel, cudaFuncCachePreferL1);
 	for(int k = 0; k < n; k++)
 	{
-		floydWarshallKernel<<<dimGrid, bsize>>>(k, deviceMatrix, n);
-		err = cudaDeviceSynchronize();
-		if(err != cudaSuccess)
+		floydWarshallKernel<<<dimGrid, threadsPerBlock>>>(k, deviceMatrix, n);
+	}
+	cudaDeviceSynchronize();
+
+	cudaMemcpy(matrix, deviceMatrix, size, cudaMemcpyDeviceToHost);
+
+	cudaFree(deviceMatrix);
+
+	cudaError err = cudaGetLastError();
+	if(err != cudaSuccess)
+	{
+		fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(err), __FILE__, __LINE__);
+		exit(EXIT_FAILURE);
+	}
+}
+
+__global__ void floydWarshallKernel(int k, int *matrix, int n)
+{
+	int i = blockDim.y * blockIdx.y + threadIdx.y;
+	int j = blockDim.x * blockIdx.x + threadIdx.x;
+
+	if (i < n && j < n) 
+	{
+		int newPath = matrix[k * n + j] + matrix[i * n + k];
+		int oldPath = matrix[i * n + j];
+		if (oldPath > newPath)
 		{
-			printf("%s in %s at line %d\n", cudaGetErrorString(err), __FILE__, __LINE__);
+			matrix[i * n + j] = newPath;		
 		}
-	}
-
-	err = cudaMemcpy(matrix, deviceMatrix, size, cudaMemcpyDeviceToHost);
-	if(err != cudaSuccess)
-	{
-		printf("%s in %s at line %d\n", cudaGetErrorString(err), __FILE__, __LINE__);
-	}
-
-	err = cudaFree(deviceMatrix);
-	if(err != cudaSuccess)
-	{
-		printf("%s in %s at line %d\n", cudaGetErrorString(err),__FILE__,__LINE__);
 	}
 }
 
@@ -223,5 +208,18 @@ void populateMatrix(int *matrix, int n, int density)
 			}
 
 		}
+	}
+}
+
+int iDivUp(int a, int b)
+{
+	int result = ceil(1.0 * a / b);
+	if(result < 1)
+	{
+		return 1;
+	}
+	else
+	{
+		return result;
 	}
 }

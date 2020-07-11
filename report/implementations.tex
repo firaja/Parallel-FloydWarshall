@@ -1,9 +1,9 @@
 \section{Computational Platforms and Software Libraries}
 This section describes technical details about the implementation of the solutions exposed in this document. It also contains
-the collected data under analysis.
+the collected data used for the analysis.
 \subsection{Sequential implementation}
 The \emph{sequential} version of the FW algorithm can be found \href{https://github.com/firaja/Parallel-FloydWarshall/blob/master/sequential.c}{here}. 
-The program is compiled as it follows:
+The program is compiled as follows:
 \begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
 $ gcc sequential.c -o sequential.out -O3
 \end{lstlisting}
@@ -24,13 +24,13 @@ Table \ref*{tab:seq-time} shows the execution time (expressed in milliseconds) d
 \begin{tabular}{|r|r|}
 \hline
 \rowcolor[HTML]{3166FF} 
-{\color[HTML]{FFFFFF} \textbf{Vertices}} & {\color[HTML]{FFFFFF} \textbf{Execution time (ms)}} \\ \hline
-1000                                     & 1095                                                \\ \hline
-2000                                     & 8860                                                \\ \hline
-5000                                     & 138643                                              \\ \hline
-7500                                     & 468750                                              \\ \hline
-10000                                    & 1112111                                             \\ \hline
-12500                                    & 2170138                                             \\ \hline
+{\color[HTML]{FFFFFF} \textbf{Vertices}} & {\color[HTML]{FFFFFF} \textbf{Execution time}} \\ \hline
+1000                                     & 1095 ms                                        \\ \hline
+2000                                     & 8860 ms                                        \\ \hline
+5000                                     & 138643 ms                                      \\ \hline
+7500                                     & 468750 ms                                      \\ \hline
+10000                                    & 1112111 ms                                     \\ \hline
+12500                                    & 2170138 ms                                     \\ \hline
 \end{tabular}
 \caption{Execution time of the \emph{sequential} FW}                                                                                                                                            
 \label{tab:seq-time} 
@@ -87,8 +87,8 @@ the program computes the \emph{APSP} problem for 5040 vertices.
 \caption{Execution time of the \emph{MPI} FW}                                                                                                                                            
 \label{tab:mpi-time}
 \end{table}
-Timings are captured through the light-weight profiler \texttt{mpiP} that calculates the percentage of time spent by MPI for initialization/finalization and communication.
-
+Timings are captured through \texttt{mpiP} that calculates the percentage of time spent by MPI for initialization/finalization and communication.
+\texttt{mpiP} is a lightweight profiling library for MPI applications. Because it only collects statistical information about MPI functions, \texttt{mpiP} generates considerably less overhead and much less data than tracing tools. All the information captured by mpiP is task-local. It only uses communication during report generation, typically at the end of the experiment, to merge results from all of the tasks into one output file.
 
 
 \subsection{OpenMP implementation}

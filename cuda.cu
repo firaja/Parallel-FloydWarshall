@@ -137,12 +137,18 @@ void floydWarshall(int *matrix, const int n, int threadsPerBlock)
 
 __global__ void floydWarshallKernel(int k, int *matrix, int n)
 {
-	int i = blockDim.y * blockIdx.y + threadIdx.y;
+
 	int j = blockDim.x * blockIdx.x + threadIdx.x;
 
-	if (i < n && j < n) 
+	if (j < n) 
 	{
-		int newPath = matrix[k * n + j] + matrix[i * n + k];
+		__shared__ int ik;
+		if(threadIdx.x == 0)
+		{
+			ik = matrix[blockIdx.y * n + k];
+		}
+
+		int newPath = ik + matrix[k * n + j];
 		int oldPath = matrix[i * n + j];
 		if (oldPath > newPath)
 		{
