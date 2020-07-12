@@ -59,8 +59,9 @@ The document analyzes each implementation and gives an overview of timings, impl
 
 \subsection{Distributed with MPI}
 
-....
-The main strategy is based on scattering the whole matrix among all the process, so that
+Message Passing Interface (MPI) is a standardized and portable message-passing standard designed by a group of researchers from academia and industry to function on a wide variety of parallel computing architectures. The standard defines the syntax and semantics of a core of library routines useful to a wide range of users writing portable message-passing programs in C, C++, and Fortran. There are several well-tested and efficient implementations of MPI, many of which are open-source or in the public domain. These fostered the development of a parallel software industry, and encouraged development of portable and scalable large-scale parallel applications. \par
+
+The main strategy is based on scattering horizontally the whole matrix among all the process, so that
 each process can read a portion of the matrix of size $\frac{n^2}{p}$; then a \emph{process of competence}
 is chosen: as $k$ is in common (but never transmitted) to all the processes, there's always a cell in the $k$th
 row representing one of the two intermediate vertices for any process and there's always one process to which this row was assigned.
@@ -96,7 +97,7 @@ scatter($M$, $processes$)
 	}
 	\For{$i = 1 \rightarrow \frac{n}{processes}$}{
 		\For{$j = 1 \rightarrow n$}{
-			\If{$M_{i,j} < M_{i,k} + K_j$)}{
+			\If{$M_{i,j} < M_{i,k} + K_j$}{
 				$M_{i,j} \leftarrow M_{i,k} + K_j$
 			}
 		}
@@ -266,43 +267,36 @@ data structures. \par
 The main advantage on using OpenMP is the ease of developing parallelisms
 with simple constructs that do not differ too much from the original implementation.
 
-The following snippet shows the implementation used in this work: the matrix containing the
+The snippet at \textbf{Algorithm \ref*{alg:omp}} shows the implementation used in this work: the matrix containing the
 distances between vertices is shared among all the threads, while the 3 nested for-loops are executed
 by each thread indipendentely.
 
+\begin{algorithm}[h!]
 
+\SetAlgoLined
 
-\begin{lstlisting}[style=CStyle]
-int i, j, k;
-#pragma omp parallel num_threads(t) shared(M, k) {
-	for(k = 0; k < n; k++) {
-		#pragma omp for private(i,j) schedule(dynamic)			
-		for(i = 0; i < n; i++) {
-			for(j = 0; j < n; j++) {
-				if(M[i][j] > M[i][k] + M[k][j]) {
-					M[i][j] = M[i][k] + M[k][j];
-				}
+\texttt{\#pragma omp parallel num\_threads(t) shared(M, k)} \\
+\For{$k = 1 \rightarrow n$}{
+	\texttt{\#pragma omp for private(i,j) schedule(dynamic)} \\
+	\For{$i = 1 \rightarrow n$}{
+		\For{$j = 1 \rightarrow n$}{
+			\If{$M_{i,j} < M_{i,k} + K_j$)}{
+				$M_{i,j} \leftarrow M_{i,k} + K_j$
 			}
 		}
 	}
 }
-\end{lstlisting}
 
-A dynamic scheduler works better than a static one in this case because the
-density of the edges may vary and the compiler cannot foresee the content of the matrix. \\
-Also note that the solution does not implement a \texttt{collapse} directive like this:
-\begin{lstlisting}[style=CStyle]
-...
-for(k = 0; k < n; k++) {
-	#pragma omp for ... collapse(2)			
-	for(i = 0; i < n; i++) {
-		for(j = 0; j < n; j++) {
-			...
-		}
-	}
-}
-\end{lstlisting}
-that's because when we collapse multiple loops, OpenMP turns them into a single loop: there is one
+ 
+\caption{Multithreaded FW with \emph{OpenMP}}\label{alg:omp}
+\end{algorithm}
+
+
+Despite the overhead that the dynamic scheduler entails, in this case it works better than a static one because the
+content of the sub-matrices varies from thread to thread so a group of threads may do more write operations on $M$ and a
+static scheduler would make wait the others until they finish. 
+ \\
+Also note that the solution does not implement a \texttt{collapse} directive because when we collapse multiple loops, OpenMP turns them into a single loop: there is one
 index that is constructed from \texttt{i} and \texttt{j} using division and modulo operations. This can
 have huge impacts on the performance because of this overhead, especially if the matrix is really wide.
 
@@ -462,12 +456,18 @@ for other threads.
 \begin{algorithm}[h!]
 
 \SetAlgoLined
-
 \DontPrintSemicolon
-  \SetKwFunction{FMain}{kernel}
+  
+
+\For{$k = 0 \rightarrow n$}{
+	\textnormal{kernel<{}<{}<$\frac{n+b-1}{b}$, $b$>{}>{}>($M$, $n$, $k$)}
+}
+
+\;
+
+\SetKwFunction{FMain}{kernel}
   \SetKwProg{Fn}{Function}{:}{}
   \Fn{\FMain{$M$, $n$, $k$}}{
-
 
 $j \leftarrow \left|B\right|_x \times B_x + T_x$ \\
 $i \leftarrow \left|B\right|_y$ \\
@@ -553,3 +553,149 @@ can be involved in the computation, the speedup and the efficiency are calculate
 \label{fig:cuda-time}                                                                                                                                                           
 \end{figure}
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\subsection{Hybrid: MPI + OpenMP}
+\begin{algorithm}[h!]
+
+\SetAlgoLined
+
+broadcast($n$, $ROOT$) \\
+scatter($M$, $processes$)
+
+\texttt{\#pragma omp parallel num\_threads(t) shared(M, k)} \\
+\For{$k = 1 \rightarrow n$}{
+	\texttt{\#pragma omp master} \\
+	\If{$rank =$ \textnormal{findOwnerOfKthRow}($k$, $rank$)}{
+		$K \leftarrow $ getRow($M$, $k$) \\
+		broadcast($K$, $owner$) \\
+	}
+
+	\texttt{\#pragma omp for private(i,j) schedule(dynamic)} \\
+	\For{$i = 1 \rightarrow \frac{n}{processes}$}{
+		\For{$j = 1 \rightarrow n$}{
+			\If{$M_{i,j} < M_{i,k} + K_j$}{
+				$M_{i,j} \leftarrow M_{i,k} + K_j$
+			}
+		}
+	}
+}
+gather($M$, $processes$);
+ 
+\caption{\emph{MPI+OpenMP} FW}\label{alg:mpi+omp}
+\end{algorithm}
+
+
+
+
+
+
+
+
+
+
+
+
+\subsection{Hybrid: MPI + CUDA}
+\begin{algorithm}[h!]
+
+\SetAlgoLined
+\DontPrintSemicolon
+broadcast($n$, $ROOT$) \\
+scatter($M$, $processes$)
+
+\For{$k = 1 \rightarrow n$}{
+	\If{$rank =$ \textnormal{findOwnerOfKthRow}($k$, $rank$)}{
+		$K \leftarrow $ getRow($M$, $k$) \\
+		broadcast($K$, $owner$) \\
+	}
+
+	
+  
+
+
+	\textnormal{kernel<{}<{}<$\frac{n+b-1}{b}$, $b$>{}>{}>($M$, $n$, $k$)}
+
+}
+gather($M$, $processes$);
+\;
+\;
+  \SetKwFunction{FMain}{kernel}
+  \SetKwProg{Fn}{Function}{:}{}
+  \Fn{\FMain{$M$, $n$, $k$}}{
+
+
+$j \leftarrow \left|B\right|_x \times B_x + T_x$ \\
+$i \leftarrow \left|B\right|_y$ \\
+
+\If{$j < n$}{
+	
+
+	\If{$M_{i,j} < M_{i,k} + M_{k,j}$}{
+		$M_{i,j} \leftarrow M_{i,k} + M_{k,j}$
+	}
+}
+}
+
+ 
+\caption{\emph{MPI+CUDA} FW}\label{alg:mpi+cuda}
+\end{algorithm}

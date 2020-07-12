@@ -1,7 +1,9 @@
 \section{Computational Platforms and Software Libraries}
 This section describes technical details about the implementation of the solutions exposed in this document. It also contains
 the collected data used for the analysis.
-\subsection{Sequential implementation}
+
+The results of each run are tested with 16bit Fletcher's checksum so that errors can be quickly checked over large matrices \cite{fletcher}.
+\subsection{Serial implementation}
 The \emph{sequential} version of the FW algorithm can be found \href{https://github.com/firaja/Parallel-FloydWarshall/blob/master/sequential.c}{here}. 
 The program is compiled as follows:
 \begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
@@ -32,7 +34,7 @@ Table \ref*{tab:seq-time} shows the execution time (expressed in milliseconds) d
 10000                                    & 1112111 ms                                     \\ \hline
 12500                                    & 2170138 ms                                     \\ \hline
 \end{tabular}
-\caption{Execution time of the \emph{sequential} FW}                                                                                                                                            
+\caption{Execution time of the \emph{serial} FW}                                                                                                                                            
 \label{tab:seq-time} 
 \end{table}
 
@@ -61,7 +63,7 @@ The program is compiled as it follows:
 \begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
 $ mpicc -g -Wall mpi.c -o mpi.out -O3
 \end{lstlisting}
-Like the \emph{sequential} version, the program accepts 2 arguments:
+Like the \emph{serial} version, the program accepts 2 arguments:
 \begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
 $ mpirun -np <p> mpi.out <v> <d>
 \end{lstlisting}
@@ -97,7 +99,7 @@ The program is compiled as it follows:
 \begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
 $ g++ -fopenmp openmp.c -o openmp.out -O3
 \end{lstlisting}
-Unlike the \emph{sequential} version, the program accepts 3 arguments:
+Unlike the \emph{serial} version, the program accepts 3 arguments:
 \begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
 $ ./openmp.out <v> <d> <t>
 \end{lstlisting}
@@ -123,13 +125,14 @@ Table \ref*{tab:omp-time} shows the execution time (expressed in milliseconds) d
 \end{table}
 
 \subsection{CUDA implementation}
-The \emph{MPI} version of the FW algorithm can be found \href{https://github.com/firaja/Parallel-FloydWarshall/blob/master/cuda.c}{here}. 
-The program is compiled as it follows:
+The \emph{MPI} version of the FW algorithm can be found \href{https://github.com/firaja/Parallel-FloydWarshall/blob/master/cuda.cu}{here}. Alternatively the version 
+that uses only global memory is \href{https://github.com/firaja/Parallel-FloydWarshall/blob/master/cuda2.cu}{here}.
+The program is compiled as follows:
 \begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
 $ nvcc cuda.cu -o cuda.out \
   -gencode=arch=compute_75,code=compute_75 -O3
 \end{lstlisting}
-Unlike the \emph{sequential} version, the program accepts 3 arguments:
+Unlike the \emph{serial} version, the program accepts 3 arguments:
 \begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
 $ ./cuda.out <v> <d> <b>
 \end{lstlisting}
@@ -153,3 +156,16 @@ Table \ref*{tab:cuda-time} shows the execution time (expressed in milliseconds) 
 \caption{Execution time of the \emph{CUDA} FW}                                                                                                                                            
 \label{tab:cuda-time}
 \end{table}
+
+
+Using a CPU-based timer would measure only the kernel's launch time and not the kernel's execution time and it would require a host-device synchronization point, like \texttt{cudaDeviceSynchronize()} which stalls the GPU pipeline.
+
+So timings are taken with CUDA events that are created and destroyed with \texttt{cudaEventCreate()} and \texttt{cudaEventDestroy()}. \texttt{cudaEventRecord()} places the start and stop events into the default stream, stream 0 and the device will record a time stamp for the event when it reaches that event in the stream. 
+The \texttt{cudaEventElapsedTime()} function returns in the first argument the number of milliseconds time elapsed between the recording events. This value has a resolution of approximately one half microsecond.
+
+
+
+
+
+
+

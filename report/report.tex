@@ -14,6 +14,7 @@
 \usepackage{listings}
 \usepackage{amsmath}
 \usepackage{mathabx}
+\usepackage[bottom]{footmisc}
 \newfontfamily\listingsfont[Scale=.7]{inconsolata}\usepackage[font=footnotesize,labelfont=bf]{caption}
 \captionsetup[algorithm2e]{font=footnotesize}
 \usepackage[table,xcdraw]{xcolor}
@@ -64,7 +65,7 @@ of the parallelized algorithms on modern multicore and distributed platforms, an
 to significantly accelerate FW performance utilizing the full capacity provided by the architectures used.
 \end{abstract}
 
-todo: descrizione openmp, cuda, mpiP, wakeupGPU, timings, usi
+todo: timings
 
 
 \input{intro}
@@ -75,6 +76,7 @@ todo: descrizione openmp, cuda, mpiP, wakeupGPU, timings, usi
 \input{implementations}
 
 
+\input{conclusion}
 
 
 
@@ -86,7 +88,12 @@ todo: descrizione openmp, cuda, mpiP, wakeupGPU, timings, usi
 
 \bibitem{nvidia} 
 NVIDIA Developer: Turing tuning guide,
-\\\texttt{https://docs.nvidia.com/cuda/turing-tuning-guide/index.html\#l1-cache}
+\\\texttt{https://docs.nvidia.com/cuda/turing-tuning-guide/index.html}
+
+
+\bibitem{fletcher} 
+Fletcher, J. G. (January 1982). \textit{An Arithmetic Checksum for Serial Transmissions}. IEEE Transactions on Communications. COM-30 (1): 247–252. 
+\href{https://ieeexplore.ieee.org/document/1095369}{doi:10.1109/tcom.1982.1095369}
 \end{thebibliography}
 
 
