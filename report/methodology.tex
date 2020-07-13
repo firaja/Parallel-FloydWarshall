@@ -460,7 +460,7 @@ for other threads.
   
 
 \For{$k = 0 \rightarrow n$}{
-	\textnormal{kernel<{}<{}<$\frac{n+b-1}{b}$, $b$>{}>{}>($M$, $n$, $k$)}
+	\textnormal{kernel<{}<{}<$\frac{n+b-1}{b} \times n$, $b$>{}>{}>($M$, $n$, $k$)}
 }
 
 \;
@@ -615,6 +615,12 @@ can be involved in the computation, the speedup and the efficiency are calculate
 
 
 \subsection{Hybrid: MPI + OpenMP}
+In order to make the most of \emph{MPI FW}, it can be combined with \emph{OpenMP}; this
+makes sense because each process runs the $i$ and $j$ for loops with one thread and nowadays
+is more than rare to have a cluster composed of single thread CPUs.
+
+\textbf{Algorithm \ref*{alg:mpi+omp}} shows how easily \emph{MPI FW} can be modified
+so that each process can benefit from multithreading.
 \begin{algorithm}[h!]
 
 \SetAlgoLined
@@ -622,7 +628,7 @@ can be involved in the computation, the speedup and the efficiency are calculate
 broadcast($n$, $ROOT$) \\
 scatter($M$, $processes$)
 
-\texttt{\#pragma omp parallel num\_threads(t) shared(M, k)} \\
+\texttt{\#pragma omp parallel num\_threads(t) shared(M, k, p)} \\
 \For{$k = 1 \rightarrow n$}{
 	\texttt{\#pragma omp master} \\
 	\If{$rank =$ \textnormal{findOwnerOfKthRow}($k$, $rank$)}{
@@ -631,7 +637,7 @@ scatter($M$, $processes$)
 	}
 
 	\texttt{\#pragma omp for private(i,j) schedule(dynamic)} \\
-	\For{$i = 1 \rightarrow \frac{n}{processes}$}{
+	\For{$i = 1 \rightarrow \frac{n}{p}$}{
 		\For{$j = 1 \rightarrow n$}{
 			\If{$M_{i,j} < M_{i,k} + K_j$}{
 				$M_{i,j} \leftarrow M_{i,k} + K_j$
