@@ -88,14 +88,14 @@ At the end of the $k$ for-loop, all the local matrices are gathered to the root 
 \SetAlgoLined
 
 broadcast($n$, $ROOT$) \\
-scatter($M$, $processes$)
+scatter($M$, $p$)
 
 \For{$k = 1 \rightarrow n$}{
 	\If{$rank =$ \textnormal{findOwnerOfKthRow}($k$, $rank$)}{
 		$K \leftarrow $ getRow($M$, $k$) \\
 		broadcast($K$, $owner$) \\
 	}
-	\For{$i = 1 \rightarrow \frac{n}{processes}$}{
+	\For{$i = 1 \rightarrow \frac{n}{p}$}{
 		\For{$j = 1 \rightarrow n$}{
 			\If{$M_{i,j} < M_{i,k} + K_j$}{
 				$M_{i,j} \leftarrow M_{i,k} + K_j$
@@ -103,7 +103,7 @@ scatter($M$, $processes$)
 		}
 	}
 }
-gather($M$, $processes$);
+gather($M$, $p$);
  
 \caption{Distributed version of FW}\label{alg:mpi}
 \end{algorithm}
@@ -231,7 +231,7 @@ With a consequent decrease in efficiency as shown in \textbf{Figure \ref*{fig:mp
 
 
 
-\subsection{Multithreading with OpenMP}
+\subsection{Shared-memory multiprocessing with OpenMP}
 OpenMP (Open Multi-Processing) is an application programming
 interface (API) for parallel programming intended to work on shared-
 memory architectures. More specifically, it is a set of compiler
@@ -275,7 +275,7 @@ by each thread indipendentely.
 
 \SetAlgoLined
 
-\texttt{\#pragma omp parallel num\_threads(t) shared(M, k)} \\
+\texttt{\#pragma omp parallel num\_threads(t) shared(M, K)} private(k) \\
 \For{$k = 1 \rightarrow n$}{
 	\texttt{\#pragma omp for private(i,j) schedule(dynamic)} \\
 	\For{$i = 1 \rightarrow n$}{
@@ -616,7 +616,7 @@ can be involved in the computation, the speedup and the efficiency are calculate
 
 \subsection{Hybrid: MPI + OpenMP}
 In order to make the most of \emph{MPI FW}, it can be combined with \emph{OpenMP}; this
-makes sense because each process runs the $i$ and $j$ for loops with one thread and nowadays
+makes sense because otherwise each process would run the $i$ and $j$ for loops on one thread and nowadays
 is more than rare to have a cluster composed of single thread CPUs.
 
 \textbf{Algorithm \ref*{alg:mpi+omp}} shows how easily \emph{MPI FW} can be modified
@@ -630,7 +630,7 @@ scatter($M$, $processes$)
 
 \texttt{\#pragma omp parallel num\_threads(t) shared(M, k, p)} \\
 \For{$k = 1 \rightarrow n$}{
-	\texttt{\#pragma omp master} \\
+	\texttt{\#pragma omp single} \\
 	\If{$rank =$ \textnormal{findOwnerOfKthRow}($k$, $rank$)}{
 		$K \leftarrow $ getRow($M$, $k$) \\
 		broadcast($K$, $owner$) \\
@@ -662,12 +662,17 @@ gather($M$, $processes$);
 
 
 \subsection{Hybrid: MPI + CUDA}
+Another way to improve the efficiency of the cluster is to 
+use GPGPU on each node.
+
+\textbf{Algorithm \ref*{alg:mpi+cuda}} shows how this solution
+can be implemented.
 \begin{algorithm}[h!]
 
 \SetAlgoLined
 \DontPrintSemicolon
 broadcast($n$, $ROOT$) \\
-scatter($M$, $processes$)
+scatter($M$, $p$)
 
 \For{$k = 1 \rightarrow n$}{
 	\If{$rank =$ \textnormal{findOwnerOfKthRow}($k$, $rank$)}{
@@ -679,10 +684,10 @@ scatter($M$, $processes$)
   
 
 
-	\textnormal{kernel<{}<{}<$\frac{n+b-1}{b}$, $b$>{}>{}>($M$, $n$, $k$)}
+	\textnormal{kernel<{}<{}<$\frac{n+b-1}{b\cdot p}\times n$, $b$>{}>{}>($M$, $n$, $k$)}
 
 }
-gather($M$, $processes$);
+gather($M$, $p$);
 \;
 \;
   \SetKwFunction{FMain}{kernel}
@@ -705,3 +710,8 @@ $i \leftarrow \left|B\right|_y$ \\
  
 \caption{\emph{MPI+CUDA} FW}\label{alg:mpi+cuda}
 \end{algorithm}
+
+Although the increase of performance, this solution implies
+high costs because each node must be equipped with a GPU; moreover the GPUs
+(that must be produced by NVIDIA) must be compatibile with the version of the CUDA Toolkit
+for which the program was compiled for.

@@ -1,3 +1,15 @@
 \section*{Conclusion}
 
-In this work we described three approaches to parallelize the FW algorithm with three different architectures.
+In this work we described three approaches to parallelize the FW algorithm with three different architectures:
+distributed with MPI, shared-memory multiprocessing with OpenMP and GPGPU with CUDA.
+
+The fastest "pure" implementation is \emph{CUDA FW} thanks to the high computation capability and high memory bandwidth, 
+but it requires more expensive hardware. 
+
+\emph{MPI FW} (with one thread per node)  is still faster than the \emph{serial}, but the implementation
+is more complex, the cost of the cluster (hosting and maintenance) makes the solution non convenient,
+the efficiency depends on the network bandwidth and the speedup is not that high.
+
+\emph{OpenMP FW} is almost 95 times faster than \emph{serial FW} but 13 times slower than \emph{CUDA FW}. The absence of
+overhead due to communication, fast memory access, easy development process and relatively low costs make this solution the
+most affordable, maintenable and cost-efficient one.
