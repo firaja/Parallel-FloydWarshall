@@ -13,3 +13,8 @@ the efficiency depends on the network bandwidth and the speedup is not that high
 \emph{OpenMP FW} is almost 95 times faster than \emph{serial FW} but 13 times slower than \emph{CUDA FW}. The absence of
 overhead due to communication, fast memory access, easy development process and relatively low costs make this solution the
 most affordable, maintenable and cost-efficient one.
+
+Talking about hybrid solutions, \emph{MPI + CUDA} is obviously faster than \emph{MPI + OpenMP} as long as the matrix is not small, 
+but the benefits may not justify the total cost of the infrastructure: the monthly cost for hosting a server with a GPU is at least
+four times the cost of one without a GPU. This solution is suggested to those systems that really need the lowest response time possible
+(\emph{e.g.} real-time systems or systems that cannot rely on a caching mechanism in front of them).

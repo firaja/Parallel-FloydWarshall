@@ -53,7 +53,7 @@ Once $k$ is set and it's shared among all processes, each process puts \emph{und
 of its sub-matrix and selects its \emph{intermediate edges} depending on $k$.
 
 In this work we propose 3 parallel architectures implemented with 3 different parallel programming environments: 
-\emph{Distributed computing} with MPI, \emph{Mutithreading} with OpenMP and \emph{GPGPU} with CUDA.
+\emph{Distributed computing} with MPI, \emph{Shared-memory Mutithreading} with OpenMP and \emph{GPGPU} with CUDA.
 
 The document analyzes each implementation and gives an overview of timings, implementations and pros and cons for each case.
 
@@ -63,9 +63,9 @@ Message Passing Interface (MPI) is a standardized and portable message-passing s
 
 The main strategy is based on scattering horizontally the whole matrix among all the process, so that
 each process can read a portion of the matrix of size $\frac{n^2}{p}$; then a \emph{process of competence}
-is chosen: as $k$ is in common (but never transmitted) to all the processes, there's always a cell in the $k$th
+is chosen: as $k$ is in common (but never transmitted) to all the processes, there's always a cell in the $k^{th}$
 row representing one of the two intermediate vertices for any process and there's always one process which this row was assigned to.
-The value $k$ is always "synchronized" among processes because each for-loop involving $k$ starts with a collective communication
+The value $k$ is always "up to date" among processes because each for-loop involving $k$ starts with a collective communication
 which implies a synchronization point among processes.
 
 \begin{figure}[h!]
@@ -75,9 +75,9 @@ which implies a synchronization point among processes.
 \caption{View of the data each thread can reach}                                                                                                                                            
 \label{fig:threads}                                                                                                                                                           
 \end{figure}
-Everytime $k$ changes, the $k$th row is broadcasted by the \emph{process of competence} (the process that "owns" the row) to the other processes;
+Everytime $k$ changes, the $k^{th}$ row is broadcasted by the \emph{process of competence} (the process that "owns" the row) to the other processes;
 a total of $k$ \texttt{MPI\_Bcast} operations are required. \par
-Once the $k$th row has been received, each process acts like the original FW in the $i$ and $j$ for-loops; obviously
+Once the $k^{th}$ row has been received, each process acts like the original FW in the $i$ and $j$ for-loops; obviously
 they each write values in their own local matrix. \par
 
 At the end of the $k$ for-loop, all the local matrices are gathered to the root process. 
@@ -91,7 +91,7 @@ broadcast($n$, $ROOT$) \\
 scatter($M$, $p$)
 
 \For{$k = 1 \rightarrow n$}{
-	\If{$rank =$ \textnormal{findOwnerOfKthRow}($k$, $rank$)}{
+	\If{$rank =$ \textnormal{findOwnerOfK$^{th}$Row}($k$, $rank$)}{
 		$K \leftarrow $ getRow($M$, $k$) \\
 		broadcast($K$, $owner$) \\
 	}
@@ -113,7 +113,7 @@ We can list all the communication required:
 \begin{itemize}
 \item{1 \texttt{MPI\_Bcast} for communicating the value of $n$}
 \item{1 \texttt{MPI\_Scatter} for the assignment of the local sub-matrix}
-\item{$k$ \texttt{MPI\_Bcast} for communicating the $k$th row}
+\item{$k$ \texttt{MPI\_Bcast} for communicating the $k^{th}$ row}
 \item{1 \texttt{MPI\_Gather} for the collection of the local sub-matrix}
 \end{itemize}
 
@@ -253,8 +253,8 @@ The main advantage on using OpenMP is the ease of developing parallelismswith si
 
 The snippet at \textbf{Algorithm \ref*{alg:omp}} shows the implementation used in this work: the matrix containing the
 distances between vertices is shared among all the threads, while the two nested for-loops are executed
-by each thread indipendentely. The $k$th row is extracted by a single thread and shared among the other threads: this
-guarantees a sequential access to the $k$th row faster than accessing the same row directly on $M$, resulting in a speedup of up to $\textasciitilde31\%$.
+by each thread indipendentely. The $k^{th}$ row is extracted by a single thread and shared among the other threads: this
+guarantees a sequential access to the $k^{th}$ row faster than accessing the same row directly on $M$, resulting in a speedup of up to $\textasciitilde31\%$.
 
 \begin{algorithm}[h!]
 
@@ -263,7 +263,7 @@ guarantees a sequential access to the $k$th row faster than accessing the same r
 \texttt{\#pragma omp parallel num\_threads(t) shared(M, K)} private(k) \\
 \For{$k = 1 \rightarrow n$}{
 	\texttt{\#pragma omp master} \\
-	$K \leftarrow kthRow(M)$ \\
+	$K \leftarrow k^{th}Row(M, k)$ \\
 	\texttt{\#pragma omp for private(i,j) schedule(dynamic)} \\
 	\For{$i = 1 \rightarrow n$}{
 		\For{$j = 1 \rightarrow n$}{
@@ -471,7 +471,7 @@ $i \leftarrow \left|B\right|_y$ \\
 }
 }
  
-\caption{Kernel of the \emph{CUDA-FW} on a pre-Fermi architecture}\label{alg:cuda}
+\caption{Kernel of the \emph{CUDA-FW} on a pre-Volta architecture}\label{alg:cuda}
 \end{algorithm}
 
 \textbf{Algorithm \ref*{alg:cuda}} shows the kernel function for this implementation. \\
@@ -484,6 +484,7 @@ assures that $T_{0,0}$ had written in the shared memory and the block can actual
 
 The state-of-the-art L1 cache in Volta and Turing offers lower latency, higher bandwidth, and higher capacity compared to the earlier architectures. Like Volta, Turing's L1 can cache write operations (write-through). The result is that for many applications Volta and Turing narrow the performance gap between explicitly managed shared memory and direct access to device memory \cite{nvidia}. \par
 For this reason we benchmarked \textbf{Algorithm \ref*{alg:cuda2}} which relies only on global memory and we do not experienced any performance degradation on the Turing architecture.
+This mechanism is present in the newer Ampere architecture as well.
 
 
 
@@ -509,7 +510,7 @@ $i \leftarrow \left|B\right|_y$ \\
 }
 }
  
-\caption{Kernel of the \emph{CUDA-FW} on a post-Fermi architecture}\label{alg:cuda2}
+\caption{Kernel of the \emph{CUDA-FW} on a Volta and post-Volta architecture}\label{alg:cuda2}
 \end{algorithm}
 
 Because each thread does little computation and uses high memory bandwidth, timings are really low if compared
@@ -521,12 +522,12 @@ that's because the occupancy of the Streaming Multiprocessors is at its peak and
 \centering                                                                        
 \includegraphics[width=3.5in]{diagrams/cuda-speedup}
 \captionsetup{justification=centering}                                                                                                                                   
-\caption{Speedup of \emph{CUDA} FW consuming a medium matrix compared to \emph{sequential} and \emph{OMP} FW}                                                                                                                                            
+\caption{Speedup of \emph{CUDA} FW (128 threads per block) consuming a medium matrix compared to \emph{sequential} and \emph{OMP} FW}                                                                                                                                            
 \label{fig:cuda-speedup}                                                                                                                                                           
 \end{figure}
 
 Because the CUDA APIs don't allow the user to control the number of Streaming Multiprocessors or how many CUDA cores
-can be involved in the computation, the speedup and the efficiency are calculated based on the number of threads per block.
+can be involved in the computation, the speedup is calculated based on the number of threads per block.
 
 
 \begin{figure}[h!]

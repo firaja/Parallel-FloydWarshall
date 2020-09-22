@@ -5,7 +5,7 @@ the collected data used for the analysis.
 The results of each run are tested with 16bit Fletcher's checksum so that errors can be quickly checked over large matrices \cite{fletcher}.
 \subsection{Serial implementation}
 The \emph{sequential} version of the FW algorithm can be found \href{https://github.com/firaja/Parallel-FloydWarshall/blob/master/sequential.c}{here}. 
-The program is compiled as follows:
+The program compiles as follows:
 \begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
 $ gcc sequential.c -o sequential.out -O3
 \end{lstlisting}
@@ -58,7 +58,7 @@ third grade curve; this is the interpolated function starting from the collected
 \subsection{MPI implementation}
 
 The \emph{MPI} version of the FW algorithm can be found \href{https://github.com/firaja/Parallel-FloydWarshall/blob/master/mpi.c}{here}. 
-The program is compiled as it follows:
+The program compiles as it follows:
 
 \begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
 $ mpicc -g -Wall mpi.c -o mpi.out -O3
@@ -95,7 +95,7 @@ Timings are captured through \texttt{mpiP} that calculates the percentage of tim
 
 \subsection{OpenMP implementation}
 The \emph{OpenMP} version of the FW algorithm can be found \href{https://github.com/firaja/Parallel-FloydWarshall/blob/master/openmp.c}{here}. 
-The program is compiled as it follows:
+The program compiles as it follows:
 \begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
 $ g++ -fopenmp openmp.c -o openmp.out -O3
 \end{lstlisting}
@@ -125,9 +125,9 @@ The \texttt{gcc} version used for this work is 7.5.0 and the program ran on a In
 \end{table}
 
 \subsection{CUDA implementation}
-The \emph{CUDA} version of the FW algorithm can be found \href{https://github.com/firaja/Parallel-FloydWarshall/blob/master/cuda.cu}{here}. Alternatively the version 
-that uses only global memory is \href{https://github.com/firaja/Parallel-FloydWarshall/blob/master/cuda2.cu}{here}.
-The program is compiled as follows:
+The \emph{CUDA} version of the FW algorithm can be found \href{https://github.com/firaja/Parallel-FloydWarshall/blob/master/cuda.cu}{here} (pre-Volta architecture). Alternatively the version 
+that uses only global memory is \href{https://github.com/firaja/Parallel-FloydWarshall/blob/master/cuda2.cu}{here} (Volta and post-Volta architecture).
+The program compiles as follows:
 \begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
 $ nvcc cuda.cu -o cuda.out \
   -gencode=arch=compute_75,code=compute_75 -O3
@@ -166,6 +166,13 @@ The \texttt{cudaEventElapsedTime()} function returns in the first argument the n
 
 
 
-
-
-
+\subsection{Hybrid implementation}
+The \emph{MPI + OpenMP} version can be found \href{https://github.com/firaja/Parallel-FloydWarshall/blob/master/hybrid.c}{here}. 
+The program compiles as follows:
+\begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
+$ mpicc -g -fopenmp hybrid.c -o hybrid.out -O3
+\end{lstlisting}
+The program accepts 4 arguments (see $MPI$ and $openMP$ versions):
+\begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
+$ mpirun -np <p> hybrid.out <n> <d> <t>
+\end{lstlisting}
