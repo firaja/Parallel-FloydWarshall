@@ -15,10 +15,10 @@ The program accepts 2 arguments:
 \begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
 $ ./sequential.out <v> <d>
 \end{lstlisting}
-where \texttt{v} is the number of verteces, expressed ad positive integer, and \texttt{d} is the density of the presence of edges, expressed as an integer from 0 to 100.
+where \texttt{v} is the number of verteces, expressed as positive integer, and \texttt{d} is the density of the presence of edges, expressed as an integer from 0 to 100.
 \par
 The \texttt{gcc} version used for this work is 7.5.0 and the program ran on a Intel Core i7-9700K. \\
-Table \ref*{tab:seq-time} shows the execution time (expressed in milliseconds) depending on the number of vertices.
+\textbf{Table \ref*{tab:seq-time}} shows the execution time (expressed in milliseconds) depending on the number of vertices.
 
 
 \begin{table}[h!]
@@ -38,7 +38,7 @@ Table \ref*{tab:seq-time} shows the execution time (expressed in milliseconds) d
 \label{tab:seq-time} 
 \end{table}
 
-Figure \ref*{fig:seq-time} shows the trend of the execution time. 
+\textbf{Figure \ref*{fig:seq-time}} shows the trend of the execution time. 
 
 \begin{figure}[h!]
 \centering                                                                        
@@ -51,7 +51,7 @@ Figure \ref*{fig:seq-time} shows the trend of the execution time.
 
 It is easy to notice that the graph represents a 
 third grade curve; this is the interpolated function starting from the collected data:
-\[f(n) = 2.22n^3 - 18.83n^2 + 92.14n -94.84 \approx \Theta(n^3) \]
+\[f(n) = 2.22n^3 - 18.83n^2 + 92.14n -94.84 \in \Theta(n^3) \]
 
 
 
@@ -63,13 +63,13 @@ The program is compiled as it follows:
 \begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
 $ mpicc -g -Wall mpi.c -o mpi.out -O3
 \end{lstlisting}
-Like the \emph{serial} version, the program accepts 2 arguments:
+Like the \emph{serial} version, the program accepts 2 arguments + 1 for $\texttt{mpirun}$:
 \begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
 $ mpirun -np <p> mpi.out <v> <d>
 \end{lstlisting}
 The \texttt{MPI} version used for this work is 2.1.1 and the program ran on a cluster of 8 nodes over a LAN. \\
-Table \ref*{tab:mpi-time} shows the execution time (expressed in milliseconds) and the percentage of time spent in initialization and communication, depending on the number of processors; 
-the program computes the \emph{APSP} problem for 5040 vertices.
+\textbf{Table \ref*{tab:mpi-time}} shows the execution time (expressed in milliseconds) and the percentage of time spent in initialization and communication, depending on the number of processors; 
+in this case the program computed the \emph{APSP} problem for 5040 vertices.
 
 \begin{table}[h!]
 \centering
@@ -77,14 +77,14 @@ the program computes the \emph{APSP} problem for 5040 vertices.
 \hline
 \rowcolor[HTML]{F56B00} 
 {\color[HTML]{FFFFFF} \textbf{Processors}} & {\color[HTML]{FFFFFF} \textbf{Execution time}} & {\color[HTML]{FFFFFF} \textbf{MPI \%}} \\ \hline
-1                                          & 90842 ms                                               & 0.06                                 \\ \hline
-2                                          & 46608 ms                                               & 2.57                                 \\ \hline
-3                                          & 31309 ms                                               & 4.45                                \\ \hline
-4                                          & 24457 ms                                               & 5.47                                \\ \hline
-5                                          & 20200 ms                                               & 6.95                                 \\ \hline
-6                                          & 17403 ms                                               & 8.35                                \\ \hline
-7                                          & 15563 ms                                               & 9.12                                 \\ \hline
-8                                          & 13812 ms                                               & 10.1                                \\ \hline
+1                                          & 145447 ms                                               & 0.06                                 \\ \hline
+2                                          & 75059 ms                                               & 2.57                                 \\ \hline
+3                                          & 52336 ms                                               & 4.45                                \\ \hline
+4                                          & 39962 ms                                               & 5.47                                \\ \hline
+5                                          & 33184 ms                                               & 6.95                                 \\ \hline
+6                                          & 28731 ms                                               & 8.35                                \\ \hline
+7                                          & 25853 ms                                               & 9.50                                 \\ \hline
+8                                          & 23120 ms                                               & 11.00                                \\ \hline
 \end{tabular}
 \caption{Execution time of the \emph{MPI} FW}                                                                                                                                            
 \label{tab:mpi-time}
@@ -94,7 +94,7 @@ Timings are captured through \texttt{mpiP} that calculates the percentage of tim
 
 
 \subsection{OpenMP implementation}
-The \emph{MPI} version of the FW algorithm can be found \href{https://github.com/firaja/Parallel-FloydWarshall/blob/master/openmp.c}{here}. 
+The \emph{OpenMP} version of the FW algorithm can be found \href{https://github.com/firaja/Parallel-FloydWarshall/blob/master/openmp.c}{here}. 
 The program is compiled as it follows:
 \begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
 $ g++ -fopenmp openmp.c -o openmp.out -O3
@@ -105,7 +105,7 @@ $ ./openmp.out <v> <d> <t>
 \end{lstlisting}
 where \texttt{t} is the number of threads OpenMP can use for parallelization. \\
 The \texttt{gcc} version used for this work is 7.5.0 and the program ran on a Intel Core i7-9700K, which has 8 core with no Hyper-Threading.
-Table \ref*{tab:omp-time} shows the execution time (expressed in milliseconds) depending on the number of vertices and available cores.
+\textbf{Table \ref*{tab:omp-time}} shows the execution time (expressed in milliseconds) depending on the number of vertices and available cores.
 
 \begin{table}[h!]
 \centering
@@ -125,7 +125,7 @@ Table \ref*{tab:omp-time} shows the execution time (expressed in milliseconds) d
 \end{table}
 
 \subsection{CUDA implementation}
-The \emph{MPI} version of the FW algorithm can be found \href{https://github.com/firaja/Parallel-FloydWarshall/blob/master/cuda.cu}{here}. Alternatively the version 
+The \emph{CUDA} version of the FW algorithm can be found \href{https://github.com/firaja/Parallel-FloydWarshall/blob/master/cuda.cu}{here}. Alternatively the version 
 that uses only global memory is \href{https://github.com/firaja/Parallel-FloydWarshall/blob/master/cuda2.cu}{here}.
 The program is compiled as follows:
 \begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
@@ -160,7 +160,7 @@ Table \ref*{tab:cuda-time} shows the execution time (expressed in milliseconds) 
 
 Using a CPU-based timer would measure only the kernel's launch time and not the kernel's execution time and it would require a host-device synchronization point, like \texttt{cudaDeviceSynchronize()} which stalls the GPU pipeline.
 
-So timings are taken with CUDA events that are created and destroyed with \texttt{cudaEventCreate()} and \texttt{cudaEventDestroy()}. \texttt{cudaEventRecord()} places the start and stop events into the default stream, stream 0 and the device will record a time stamp for the event when it reaches that event in the stream. 
+So timings are taken with CUDA events that are created and destroyed with \texttt{cudaEventCreate()} and \texttt{cudaEventDestroy()}. \texttt{cudaEventRecord()} places the start and stop events into the default stream  and the device will record a time stamp for the event when it reaches that event in the stream. 
 The \texttt{cudaEventElapsedTime()} function returns in the first argument the number of milliseconds time elapsed between the recording events. This value has a resolution of approximately one half microsecond.
 
 

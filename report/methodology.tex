@@ -4,10 +4,10 @@ It's easy to notice that the nested $i$ and $j$ for-loops in \textbf{Algorithm \
 could be the \emph{edge under analysis} for another process. For example process $P^1$ is writing in a cell while process $P^2$ is reading from the same cell, leading to a unpredictable final result
 if $P^1$'s writing comes before or after $P^2$'s reading.
 
-It seems that enabling parallelization requires some sort of blocking mechanism between processes, like a semaphore, but we prove that no data race can occur as in the previous example as far as $k$
+It seems that enabling parallelization requires some sort of blocking mechanism between processes, like a semaphore, but we prove that no data race can occur as in the previous example as far as the value of $k$
 is shared between processes. 
 
-Let's assume we have 2 processes, namely $P^1$ and $P^2$ and they have \emph{under analisys} $M_{i,j}$ and $M_{x,y}$ respectively, with $x \neq i$. 
+Let's assume we have 2 processes, namely $P^1$ and $P^2$, and they have \emph{under analisys} $M_{i,j}$ and $M_{x,y}$ respectively, with $x \neq i$ so that each process partitions the matrix horizontally. 
 At any point the following system of preconditions exists (the two inequalities are taken from \textbf{Algorithm \ref*{alg:fw1}} at line 10):
 
 \begin{flalign}\label{eq:sys1}
@@ -20,7 +20,7 @@ P^{2}_{x,y} & > & P^{2}_{x,k} & + & P^{2}_{k,y}
 
 \emph{i.e.} $P^1$ is reading values of $M_{i,k}$ and $M_{k,j}$ so it can decide if $M_{i,j}$ should be overwritten; 
 the same does $P^2$ with $M_{x,k}$, $M_{k,y}$ and $M_{x,y}$ respectively. \\
-In order to have a data race, the following must be true as well
+In order to have a data race, the following statement must be true as well
 
 \[(x = i \wedge k=j) \vee (k = i \wedge y = j)\]
 
@@ -43,12 +43,12 @@ following inequality:
 \end{flalign}
 Clearly no number can be greater than itself and this means that at this point the comparison made by $P^1$ is irrilevant
 and is always evalueted false. If $P^2$ writes after or before $P^1$'s evaluation does not really matter and thus 
-there is no data race as far as $k$ is the same for all the processes.
+there is no data race as far as $k$ is the same for all the running processes.
 
 This is really important because it assures that there is no need for locking mechanism on $M$ when it comes to
 parallelize the nested $i$ and $j$ for-loops and having no blocks guarantees better performance.
 
-So the strategy relies on dividing the matrix by rows and assigning an equal number of rows to each process.
+Now the strategy relies on dividing the matrix by rows and assigning an equal number of rows to each process.
 Once $k$ is set and it's shared among all processes, each process puts \emph{under analysis} every cell
 of its sub-matrix and selects its \emph{intermediate edges} depending on $k$.
 
@@ -64,8 +64,8 @@ Message Passing Interface (MPI) is a standardized and portable message-passing s
 The main strategy is based on scattering horizontally the whole matrix among all the process, so that
 each process can read a portion of the matrix of size $\frac{n^2}{p}$; then a \emph{process of competence}
 is chosen: as $k$ is in common (but never transmitted) to all the processes, there's always a cell in the $k$th
-row representing one of the two intermediate vertices for any process and there's always one process to which this row was assigned.
-The value $k$ is always "synchronized" between process because each for-loop involving $k$ starts with a collective communication
+row representing one of the two intermediate vertices for any process and there's always one process which this row was assigned to.
+The value $k$ is always "synchronized" among processes because each for-loop involving $k$ starts with a collective communication
 which implies a synchronization point among processes.
 
 \begin{figure}[h!]
@@ -75,7 +75,7 @@ which implies a synchronization point among processes.
 \caption{View of the data each thread can reach}                                                                                                                                            
 \label{fig:threads}                                                                                                                                                           
 \end{figure}
-Everytime $k$ changes, the $k$th row is broadcasted to the other processes by the process that owns the row;
+Everytime $k$ changes, the $k$th row is broadcasted by the \emph{process of competence} (the process that "owns" the row) to the other processes;
 a total of $k$ \texttt{MPI\_Bcast} operations are required. \par
 Once the $k$th row has been received, each process acts like the original FW in the $i$ and $j$ for-loops; obviously
 they each write values in their own local matrix. \par
@@ -130,12 +130,12 @@ the implementation uses 4 bytes to store one \texttt{int} and omitting the overh
 $k = n$                               &  \texttt{MPI\_Bcast}                 &  $4n^2(p-1)$ bytes                    \\ \hline
 1                                     &  \texttt{MPI\_Gather}                &  $4\frac{n^2(p-1)}{p}$ bytes         \\ \hline
 \end{tabular}
-\caption{Execution time of the \emph{MPI} FW}                                                                                                                                            
+\caption{Approximation of the size of each communication for \emph{MPI} FW}                                                                                                                                            
 \label{tab:comm}
 \end{table}
 \par
 
-Total communications can be expressed with the following formula, that can help to calculate the bandwidth of the network
+Total communications can be expressed with the following formula, that can help to calculate the bandwidth of the network required
 for this implementation:
 \[W_{comm} = 4(p-1)(1 + n^2(1 + \frac{2}{p})) \text{ bytes}\]
 This formula is important because the time spent on communications is time taken from the calculation and a network with an inadequate
@@ -151,9 +151,9 @@ $\textasciitilde 5.46$GB transferred  over the entire network; this means that e
 \end{figure}
 
 \textbf{Figure \ref*{fig:mpi-time}} shows the amount of time taken to initialize the MPI cluster and communicate during the execution of the \emph{MPI} FW. In this case a dense 
-$5040\times5040$ matrix is used for input and the MPI cluster was located in a star network with 1Gbps bandwith.
+$5040\times5040$ matrix is used as input and the MPI cluster was located in a star network with 1Gbps bandwith.
 
-The overhead has a quadratic or linear growth with respect to the number of vertices and or the number of processes respectively; 
+The overhead has a quadratic and linear growth with respect to the number of vertices and the number of processes respectively; 
 so with a medium-small matrix the time used in communication can exceed the 10\% of the total computational time. 
 But by increasing the size of the matrix to $12600\times12600$ the time used in communication drops to 4\%, with a total of 50 seconds. Thus the implementation fits well for huge matrixes, rather than medium ones.
 
@@ -265,11 +265,12 @@ workloads. Thus, OpenMP is enriched with a flexible model for
 irregular parallelism, providing parallel while loops and recursive
 data structures. \par
 The main advantage on using OpenMP is the ease of developing parallelisms
-with simple constructs that do not differ too much from the original implementation.
+with simple constructs that (often) do not differ too much from the original implementation.
 
 The snippet at \textbf{Algorithm \ref*{alg:omp}} shows the implementation used in this work: the matrix containing the
-distances between vertices is shared among all the threads, while the 3 nested for-loops are executed
-by each thread indipendentely.
+distances between vertices is shared among all the threads, while the two nested for-loops are executed
+by each thread indipendentely. The $k$th row is extracted by a single thread and shared among the other threads: this
+guarantees a sequential access to the $k$th row faster than accessing the same row directly on $M$, resulting in a speedup of up to $\textasciitilde31\%$.
 
 \begin{algorithm}[h!]
 
@@ -277,6 +278,8 @@ by each thread indipendentely.
 
 \texttt{\#pragma omp parallel num\_threads(t) shared(M, K)} private(k) \\
 \For{$k = 1 \rightarrow n$}{
+	\texttt{\#pragma omp master} \\
+	$K \leftarrow kthRow(M)$ \\
 	\texttt{\#pragma omp for private(i,j) schedule(dynamic)} \\
 	\For{$i = 1 \rightarrow n$}{
 		\For{$j = 1 \rightarrow n$}{
@@ -294,7 +297,8 @@ by each thread indipendentely.
 
 Despite the overhead that the dynamic scheduler entails, in this case it works better than a static one because the
 content of the sub-matrices varies from thread to thread so a group of threads may do more write operations on $M$ and a
-static scheduler would make wait the others until they finish. 
+static scheduler would make wait the others until they finish. We benchmarked a loss in performance from $\textasciitilde7\%$ to $\textasciitilde48\%$ when choosing a static scheduler over
+a dynamic one, depending on the size of the matrix.
  \\
 Also note that the solution does not implement a \texttt{collapse} directive because when we collapse multiple loops, OpenMP turns them into a single loop: there is one
 index that is constructed from \texttt{i} and \texttt{j} using division and modulo operations. This can
@@ -313,8 +317,8 @@ with the vertice under analysis for Thread 1 and Thread 2 respectively.
 \end{figure}
 
 
-We prove that no race condition may appear in this case. 
-No race condition can appear if $k$ is the same among the threads and threrfore there's no need to verify atomicity of the write operation;
+We already proved that no race condition may appear in this case. 
+No race condition can occur if $k$ is the same among the threads and threrfore there's no need to verify atomicity of the write operation;
 the lack of OpenMP directive like \texttt{atomic} or \texttt{critical} plays in favor of performance. \par
 
 The speedup of the solution is sligthy worse than the ideal speedup (see \textbf{Figure \ref*{fig:omp-speedup}})
@@ -328,7 +332,7 @@ The speedup of the solution is sligthy worse than the ideal speedup (see \textbf
 \end{figure}
 When scaling from 7 to 8 threads, we notice a slight deviation from the previous (almost) linear trend. That's because the measurement
 is taken from a 8-core/8-thread CPU, namely Intel Core i7-9700K, and because no other cores were free to manage the OS and its subprocesses, the scheduler
-divided this task among all the threads. So we have approximated the speedup without counting the fluctuations due to the management of the OS. \par
+divided this task among all the threads. So we interpolated the speedup, not counting the fluctuations due to the management of the OS. \par
 
 The efficiency, which stays always above $90\%$, is shown in \textbf{Figure \ref*{fig:omp-efficiency}} alongside with its theoretical counterpart.
 
@@ -532,7 +536,7 @@ Because each thread does little computation and uses high memory bandwidth, timi
 to \emph{serial-FW} and \emph{OMP} FW with 8 cores. \\
 In fact from \textbf{Figure \ref*{fig:cuda-time}} we see a speedup up to $87.8$ times compared to \emph{serial} FW
 and $12.34$ times compared to \emph{OMP} FW with 8 cores. We also notice that the maximum speedup is reached when the number of threads per block is equal to 128;
-that's because the occupancy of the Streaming Multiprocessors is at its peak and there are less threads wasted.
+that's because the occupancy of the Streaming Multiprocessors is at its peak and there are less wasted threads.
 \begin{figure}[h!]
 \centering                                                                        
 \includegraphics[width=3.5in]{diagrams/cuda-speedup}
@@ -628,9 +632,9 @@ so that each process can benefit from multithreading.
 broadcast($n$, $ROOT$) \\
 scatter($M$, $processes$)
 
-\texttt{\#pragma omp parallel num\_threads(t) shared(M, k, p)} \\
+\texttt{\#pragma omp parallel num\_threads(t) private(k) shared(M, K, p)} \\
 \For{$k = 1 \rightarrow n$}{
-	\texttt{\#pragma omp single} \\
+	\texttt{\#pragma omp master} \\
 	\If{$rank =$ \textnormal{findOwnerOfKthRow}($k$, $rank$)}{
 		$K \leftarrow $ getRow($M$, $k$) \\
 		broadcast($K$, $owner$) \\

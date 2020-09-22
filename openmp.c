@@ -62,15 +62,20 @@ void floydWarshall(int* matrix, uint n, int threads)
 {
 	int i, j, k;
 
-    #pragma omp parallel num_threads(threads) private(k) shared(matrix)
+	int *rowK = (int*)malloc(sizeof(int)*n);
+
+    #pragma omp parallel num_threads(threads) private(k) shared(matrix, rowK)
     for (k = 0; k < n; k++) 
     {
-        #pragma omp for private(i, j) schedule(dynamic)
+    	#pragma omp master
+    	memcpy(rowK, matrix + (k * n), sizeof(int)*n);
+        
+        #pragma omp for private(i, j) schedule(static)
         for (i = 0; i < n; i++) 
         {
             for (j = 0; j < n; j++) 
             {
-                int newPath = matrix[i * n + k] + matrix[k * n + j];
+                int newPath = matrix[i * n + k] + rowK[j];
                 if (matrix[i * n + j] > newPath)
                 {
                     matrix[i * n + j] = newPath;

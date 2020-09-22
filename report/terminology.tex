@@ -1,16 +1,22 @@
 \section{Terminology}
 In this document we use specific terms that refer to specific definitions. Such terms are \emph{emphasized} in order to distingiush them from everyday terms
-and we listed them in this section, which acts as a dictionary. 
+and we listed them in this section, which acts as a dictionary.
+
 \subsubsection*{Edge/cell under analysis} 
-The edge/cell in the distance matrix selected by FW for a given $i$ and $j$.  
+The edge/cell in the distance matrix selected by FW for a given $i$ and $j$. Often noted as $M_{i,j}$ within this document.
+
 \subsubsection*{Intermediate edges} 
-The two edges whose sum must be compared with the edge \emph{under analysis} (line 10 of \textbf{Algorithm \ref*{alg:fw1}}).
+The two edges which sum must be compared with the edge \emph{under analysis} (line 10 of \textbf{Algorithm \ref*{alg:fw1}}).
+They are noted as $M_{i,k}$ and $M_{k,j}$ within this document.
+
 \subsubsection*{Serial FW} 
-The implementation of FW as show in \textbf{Algorithm \ref*{alg:fw1}}: the execution is handled by a singe process/thread.
+The implementation of FW as show in \textbf{Algorithm \ref*{alg:fw1}}: the execution is performed on a single process/thread.
+
 \subsubsection*{Speedup}
-For a given implementation $v$, it is defined as follows:
+For a given implementation $v$ of FW, it is defined as follows:
 \[S_{v} = \frac{T_{s}}{T_{v}}\]
 where $T_v$ is the execution time of the version $v$ of FW and $T_s$ is the execution time of the \emph{serial FW}. 
+
 \subsubsection*{Efficiency}
 For a given implementation $v$, it is defined as follows:
 \[E_v = \frac{S_v}{p}\]

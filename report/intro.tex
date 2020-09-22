@@ -1,6 +1,6 @@
 \section{Introduction and Background}
-The FW is a classic dynamic programming algorithm that solves the \emph{all-pairs shortest path (APSP)} problem on directed weighted
-graphs $G(V, E, w)$, where $V = \{1, \dots, n\}$ is a set of nodes, $E \subseteq V \times V$ are the edges and $w$ is a weight function $E \rightarrow  \mathbb{R}$
+The FW is a classic dynamic programming algorithm that solves the \emph{all-pairs shortest path (APSP)} problem on a directed weighted
+graph $G(V, E, w)$, where $V = \{1, \dots, n\}$ is a set of nodes, $E \subseteq V \times V$ are the edges and $w$ is a weight function $E \rightarrow  \mathbb{R}$
 that expresses the cost of crossing two nodes. The number of nodes is denoted by $n$ and the number of edges by $m$ . \par
 The output of the algorithm is typically in matrix form: the entry in the $i$th row and $j$th column is the weight of the shortest path between
 nodes $i$ and $j$. FW runs in $\Theta(|V|^3)$ time and for this reason is a good choiche when working with dense graph: even though there
