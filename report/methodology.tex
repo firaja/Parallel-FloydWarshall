@@ -233,39 +233,23 @@ With a consequent decrease in efficiency as shown in \textbf{Figure \ref*{fig:mp
 
 \subsection{Shared-memory multiprocessing with OpenMP}
 OpenMP (Open Multi-Processing) is an application programming
-interface (API) for parallel programming intended to work on shared-
-memory architectures. More specifically, it is a set of compiler
-directives, library routines and environmental variables, which in-
-fluence run-time behavior. OpenMP enables parallel programming in
-various languages, such as C, C++ and FORTRAN and runs on most
-operating systems. \par
+interface (API) for parallel programming intended to work on shared-memory architectures. More specifically, it is a set of compiler
+directives, library routines and environmental variables, which influence runtime behavior. OpenMP enables parallel programming in
+various languages, such as C, C++ and FORTRAN and runs on mostoperating systems. \par
 The OpenMP API uses the fork-join model of parallel execution.
-Multiple threads perform tasks defined implicitly or explicitly by
-OpenMP directives. All OpenMP applications begin as a single thread
-of execution, called the initial thread. The initial thread executes
-sequentially until it encounters a parallel construct. At that point,
-this thread creates a group of itself and zero or more additional
-threads and becomes the master thread of the new group. Each thread
-executes the commands included in the parallel region, and their
-execution may be differentiated, according to additional directives
-provided by the programmer. At the end of the parallel region, all
-threads are synchronized. \par
-The runtime environment is responsible for effectively scheduling
-threads. Each thread, receives a unique id, which differentiates it
-during execution. Scheduling is performed according to memory
-usage, machine load and other factors and may be adjusted by altering
-environmental variables. In terms of memory usage, most variables in
-OpenMP code are visible to all threads by default. However, OpenMP
-provides a variety of options for data management, such as a thread-
-private memory and private variables, as well as multiple ways of
-passing values between sequential and parallel regions. Additionally,
-recent OpenMP implementations introduced the concept of tasks,
-as a solution for parallelizing applications that produce dynamic
-workloads. Thus, OpenMP is enriched with a flexible model for
-irregular parallelism, providing parallel while loops and recursive
-data structures. \par
-The main advantage on using OpenMP is the ease of developing parallelisms
-with simple constructs that (often) do not differ too much from the original implementation.
+Multiple threads perform tasks defined implicitly or explicitly by OpenMP directives. All OpenMP applications begin as a single thread
+of execution, called the initial thread. The initial thread executes sequentially until it encounters a parallel construct. At that point,
+this thread creates a group of itself and zero or more additional threads and becomes the master thread of the new group. Each thread
+executes the commands included in the parallel region, and their execution may be differentiated, according to additional directives
+provided by the programmer. At the end of the parallel region, all threads are synchronized. \par
+The runtime environment is responsible for effectively scheduling threads. Each thread, receives a unique id, which differentiates it
+during execution. Scheduling is performed according to memory usage, machine load and other factors and may be adjusted by altering
+environmental variables. In terms of memory usage, most variables in OpenMP code are visible to all threads by default. 
+However, OpenMP provides a variety of options for data management, such as a thread-private memory and private variables, as well as multiple ways of
+passing values between sequential and parallel regions. Additionally, recent OpenMP implementations introduced the concept of tasks,
+as a solution for parallelizing applications that produce dynamic workloads. 
+Thus, OpenMP is enriched with a flexible model for irregular parallelism, providing parallel while loops and recursive data structures. \par
+The main advantage on using OpenMP is the ease of developing parallelismswith simple constructs that (often) do not differ too much from the original implementation.
 
 The snippet at \textbf{Algorithm \ref*{alg:omp}} shows the implementation used in this work: the matrix containing the
 distances between vertices is shared among all the threads, while the two nested for-loops are executed
@@ -424,17 +408,13 @@ An overview of the timings collected can be found in \textbf{Table \ref*{tab:omp
 \subsection{GPGPU with CUDA}
 In recent years, many scientific and numeric GPGPU applications found success due to graphics hardware’s streaming data-parallel organizational model. 
 
-The GPU serves, to an extent, as a coprocessor to the
-CPU programmed through the CUDA API. A single program known as kernel is compiled to operate on the GPU
-device to exploit the massive data parallelism inherit on Single Instruction, Multiple Data (SIMD) architecture. Groups
-of threads then execute the kernel on the GPU. Threads
-are organized into blocks which allow efficient sharing of
-data through a high-speed shared memory region accessible to the programmer
-directly through CUDA. Shared memory is shared among
-threads in a block, facilitating higher bandwidth and overall
-performance gains. Therefore, algorithms must intelligently
-manage this fast shared memory cache effectively. This
-will fully utilize the data parallelism capabilities of graphics
+The GPU serves, to an extent, as a coprocessor to the CPU programmed through the CUDA API. A single program known as kernel is compiled to operate on the GPU
+device to exploit the massive data parallelism inherit on Single Instruction, Multiple Data (SIMD) architecture. 
+Groups of threads then execute the kernel on the GPU. Threads are organized into blocks which allow efficient sharing of
+data through a high-speed shared memory region accessible to the programmer directly through CUDA. 
+Shared-memory is shared among threads in a block, facilitating higher bandwidth and overall performance gains. 
+Therefore, algorithms must intelligently manage this fast shared memory cache effectively. 
+This will fully utilize the data parallelism capabilities of graphics
 hardware and alleviates any memory latency that data intensive algorithms suffer from on the GPU.
 
 Unlike the other two implementations, \emph{CUDA} FW can rely on its \emph{grid-of-blocks} system and thus the kernel can do no loops: $k$ is still shared among threads
