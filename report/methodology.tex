@@ -42,7 +42,7 @@ following inequality:
  &&  P^{1}_{i,j} > P^{1}_{i,j} &&
 \end{flalign}
 Clearly no number can be greater than itself and this means that at this point the comparison made by $P^1$ is irrilevant
-and is always evalueted false. If $P^2$ writes after or before $P^1$'s evaluation does not really matter and thus 
+and is always evaluated to false. If $P^2$ writes after or before $P^1$'s evaluation does not really matter and thus 
 there is no data race as far as $k$ is the same for all the running processes.
 
 This is really important because it assures that there is no need for locking mechanism on $M$ when it comes to
@@ -81,7 +81,7 @@ Once the $k^{th}$ row has been received, each process acts like the original FW 
 they each write values in their own local matrix. \par
 
 At the end of the $k$ for-loop, all the local matrices are gathered to the root process. 
-\textbf{Algorithm \ref*{alg:mpi}} shows an high level implementation of the strategy exposed above.\par
+\textbf{Algorithm \ref*{alg:mpi}} shows an high level pseudo-code of the strategy exposed above. For the concrete implementation see \textbf{section \ref{mpiimpl}}.\par
 
 \begin{algorithm}[h!]
 
@@ -93,8 +93,9 @@ scatter($M$, $p$)
 \For{$k = 1 \rightarrow n$}{
 	\If{$rank =$ \textnormal{findOwnerOfK$^{th}$Row}($k$, $rank$)}{
 		$K \leftarrow $ getRow($M$, $k$) \\
-		broadcast($K$, $owner$) \\
 	}
+	broadcast($K$) \\
+
 	\For{$i = 1 \rightarrow \frac{n}{p}$}{
 		\For{$j = 1 \rightarrow n$}{
 			\If{$M_{i,j} < M_{i,k} + K_j$}{
@@ -113,7 +114,7 @@ We can list all the communication required:
 \begin{itemize}
 \item{1 \texttt{MPI\_Bcast} for communicating the value of $n$}
 \item{1 \texttt{MPI\_Scatter} for the assignment of the local sub-matrix}
-\item{$k$ \texttt{MPI\_Bcast} for communicating the $k^{th}$ row}
+\item{$n$ \texttt{MPI\_Bcast} for communicating the $k^{th}$ row}
 \item{1 \texttt{MPI\_Gather} for the collection of the local sub-matrix}
 \end{itemize}
 
@@ -127,7 +128,7 @@ the implementation uses 4 bytes to store one \texttt{int} and omitting the overh
 {\color[HTML]{FFFFFF} \textbf{Count}} & {\color[HTML]{FFFFFF} \textbf{Type}} & {\color[HTML]{FFFFFF} \textbf{Size}} \\ \hline
 1                                     &  \texttt{MPI\_Bcast}                 &  $4(p-1)$ bytes                      \\ \hline
 1                                     &  \texttt{MPI\_Scatter}               &  $4\frac{n^2(p-1)}{p}$ bytes         \\ \hline
-$k = n$                               &  \texttt{MPI\_Bcast}                 &  $4n^2(p-1)$ bytes                    \\ \hline
+$n$                               &  \texttt{MPI\_Bcast}                 &  $4n^2(p-1)$ bytes                    \\ \hline
 1                                     &  \texttt{MPI\_Gather}                &  $4\frac{n^2(p-1)}{p}$ bytes         \\ \hline
 \end{tabular}
 \caption{Approximation of the size of each communication for \emph{MPI} FW}                                                                                                                                            
@@ -151,11 +152,16 @@ $\textasciitilde 5.46$GB transferred  over the entire network; this means that e
 \end{figure}
 
 \textbf{Figure \ref*{fig:mpi-time}} shows the amount of time taken to initialize the MPI cluster and communicate during the execution of the \emph{MPI} FW. In this case a dense 
-$5040\times5040$ matrix is used as input and the MPI cluster was located in a star network with 1Gbps bandwith.
+$5040\times5040$ matrix is used as input and the MPI cluster was located in a completely-connected network with 1Gbps bandwith.
 
-The overhead has a quadratic and linear growth with respect to the number of vertices and the number of processes respectively; 
+The bandwidth required has a quadratic and linear growth with respect to the number of vertices and the number of processes respectively; 
 so with a medium-small matrix the time used in communication can exceed the 10\% of the total computational time. 
 But by increasing the size of the matrix to $12600\times12600$ the time used in communication drops to 4\%, with a total of 50 seconds. Thus the implementation fits well for huge matrixes, rather than medium ones.
+
+We can also easily calculate the time required by the algorithm with this formula:
+\[T = t_c \frac{n^3}{p} + log(p) \cdot(t_s(3+n) + t_w(1 + 2 \frac{n^2}{p} + n))\]
+where $t_c$ is the computation time, $t_s$ the time required to start a communication and $t_w$ the time to communicate a single word (in this case a \texttt{int}); the formula
+assumes that the collective communications use a tree-based hierarchical pattern that takes $log(p)$ steps rather than $p$ steps for $p$ processes.
 
 For this reason the speedup is considerable but far from the ideal for a $5040\times5040$ matrix. \textbf{Figure \ref*{fig:mpi-speedup}} shows the trend of the speedup in relation to the 
 sequential version.
@@ -284,9 +290,11 @@ content of the sub-matrices varies from thread to thread so a group of threads m
 static scheduler would make wait the others until they finish. We benchmarked a loss in performance from $\textasciitilde7\%$ to $\textasciitilde48\%$ when choosing a static scheduler over
 a dynamic one, depending on the size of the matrix.
  \\
-Also note that the solution does not implement a \texttt{collapse} directive because when we collapse multiple loops, OpenMP turns them into a single loop: there is one
+Also note that the solution does not implement a \texttt{collapse} directive because when we collapse multiple loops, OpenMP turns them into a single loop: there is a single
 index that is constructed from \texttt{i} and \texttt{j} using division and modulo operations. This can
 have huge impacts on the performance because of this overhead, especially if the matrix is really wide.
+
+For the concrete implementation see \textbf{section \ref{ompimpl}}.
 
 \textbf{Figure \ref*{fig:threads}} shows how 2 threads interact inside the matrix: the red and orange zones highlight the cells where
 Thread 1 and Thread 2 can write respectively; the blue and turquise cells represent the intermediate vertices that are compared
@@ -486,6 +494,8 @@ The state-of-the-art L1 cache in Volta and Turing offers lower latency, higher b
 For this reason we benchmarked \textbf{Algorithm \ref*{alg:cuda2}} which relies only on global memory and we do not experienced any performance degradation on the Turing architecture.
 This mechanism is present in the newer Ampere architecture as well.
 
+For the concrete implementation see \textbf{section \ref{cudaimpl}}.
+
 
 
 \begin{algorithm}[h!]
@@ -510,7 +520,7 @@ $i \leftarrow \left|B\right|_y$ \\
 }
 }
  
-\caption{Kernel of the \emph{CUDA-FW} on a Volta and post-Volta architecture}\label{alg:cuda2}
+\caption{Kernel of the \emph{CUDA-FW} on a Volta and post-Volta architectures}\label{alg:cuda2}
 \end{algorithm}
 
 Because each thread does little computation and uses high memory bandwidth, timings are really low if compared
@@ -618,8 +628,8 @@ scatter($M$, $processes$)
 	\texttt{\#pragma omp master} \\
 	\If{$rank =$ \textnormal{findOwnerOfKthRow}($k$, $rank$)}{
 		$K \leftarrow $ getRow($M$, $k$) \\
-		broadcast($K$, $owner$) \\
 	}
+	broadcast($K$) \\
 
 	\texttt{\#pragma omp for private(i,j) schedule(dynamic)} \\
 	\For{$i = 1 \rightarrow \frac{n}{p}$}{
@@ -635,7 +645,7 @@ gather($M$, $processes$);
 \caption{\emph{MPI+OpenMP} FW}\label{alg:mpi+omp}
 \end{algorithm}
 
-
+For the concrete implementation see \textbf{section \ref{hybimpl}}.
 
 
 
@@ -662,11 +672,8 @@ scatter($M$, $p$)
 \For{$k = 1 \rightarrow n$}{
 	\If{$rank =$ \textnormal{findOwnerOfKthRow}($k$, $rank$)}{
 		$K \leftarrow $ getRow($M$, $k$) \\
-		broadcast($K$, $owner$) \\
 	}
-
-	
-  
+  	broadcast($K$) \\
 
 
 	\textnormal{kernel<{}<{}<$\frac{n+b-1}{b\cdot p}\times n$, $b$>{}>{}>($M$, $n$, $k$)}

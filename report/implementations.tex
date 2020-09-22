@@ -55,7 +55,7 @@ third grade curve; this is the interpolated function starting from the collected
 
 
 
-\subsection{MPI implementation}
+\subsection{MPI implementation}\label{mpiimpl}
 
 The \emph{MPI} version of the FW algorithm can be found \href{https://github.com/firaja/Parallel-FloydWarshall/blob/master/mpi.c}{here}. 
 The program compiles as it follows:
@@ -90,10 +90,10 @@ in this case the program computed the \emph{APSP} problem for 5040 vertices.
 \label{tab:mpi-time}
 \end{table}
 Timings are captured through \texttt{mpiP} that calculates the percentage of time spent by MPI for initialization/finalization and communication.
-\texttt{mpiP} is a lightweight profiling library for MPI applications. Because it only collects statistical information about MPI functions, \texttt{mpiP} generates considerably less overhead and much less data than tracing tools. All the information captured by mpiP is task-local. It only uses communication during report generation, typically at the end of the experiment, to merge results from all of the tasks into one output file.
+\texttt{mpiP} is a lightweight profiling library for MPI applications. Because it only collects statistical information about MPI functions, \texttt{mpiP} generates considerably less overhead and much less data than a tracing tools. All the information captured by \texttt{mpiP} is task-local. It only uses communication during report generation, typically at the end of the experiment, to merge results from all of the tasks into one output file.
 
 
-\subsection{OpenMP implementation}
+\subsection{OpenMP implementation}\label{ompimpl}
 The \emph{OpenMP} version of the FW algorithm can be found \href{https://github.com/firaja/Parallel-FloydWarshall/blob/master/openmp.c}{here}. 
 The program compiles as it follows:
 \begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
@@ -124,9 +124,9 @@ The \texttt{gcc} version used for this work is 7.5.0 and the program ran on a In
 \label{tab:omp-time}
 \end{table}
 
-\subsection{CUDA implementation}
+\subsection{CUDA implementation}\label{cudaimpl}
 The \emph{CUDA} version of the FW algorithm can be found \href{https://github.com/firaja/Parallel-FloydWarshall/blob/master/cuda.cu}{here} (pre-Volta architecture). Alternatively the version 
-that uses only global memory is \href{https://github.com/firaja/Parallel-FloydWarshall/blob/master/cuda2.cu}{here} (Volta and post-Volta architecture).
+that uses only global memory is \href{https://github.com/firaja/Parallel-FloydWarshall/blob/master/cuda2.cu}{here} (Volta and post-Volta architectures).
 The program compiles as follows:
 \begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
 $ nvcc cuda.cu -o cuda.out \
@@ -166,7 +166,7 @@ The \texttt{cudaEventElapsedTime()} function returns in the first argument the n
 
 
 
-\subsection{Hybrid implementation}
+\subsection{Hybrid implementation}\label{hybimpl}
 The \emph{MPI + OpenMP} version can be found \href{https://github.com/firaja/Parallel-FloydWarshall/blob/master/hybrid.c}{here}. 
 The program compiles as follows:
 \begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
